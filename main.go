@@ -33,7 +33,14 @@ func main() {
 	}
 
 	e := echo.New()
-	e.Use(middleware.Logger())
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogStatus: true,
+		LogURI:    true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			fmt.Printf("REQUEST: uri: %v, status: %v\n", v.URI, v.Status)
+			return nil
+		},
+	}))
 	e.Use(middleware.Recover())
 
 	e.GET("/party/:id/join", handleJoinPage)
