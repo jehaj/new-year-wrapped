@@ -40,6 +40,8 @@ templ SongInput(index int) {
 			autocomplete="off"
 		/>
 		<input type="hidden" name={ fmt.Sprintf("song-id-%d", index) } id={ fmt.Sprintf("id-%d", index) }/>
+		<input type="hidden" name={ fmt.Sprintf("song-title-%d", index) } id={ fmt.Sprintf("title-%d", index) }/>
+		<input type="hidden" name={ fmt.Sprintf("song-artist-%d", index) } id={ fmt.Sprintf("artist-%d", index) }/>
 		<div id={ fmt.Sprintf("results-%d", index) } class="absolute z-10 w-full bg-slate-800 border border-slate-700 rounded-b mt-1 empty:hidden"></div>
 	</div>
 }
@@ -50,7 +52,7 @@ templ SearchResults(index int, songs []SongResult) {
 			for _, song := range songs {
 				<div 
 					class="px-4 py-2 hover:bg-slate-700 cursor-pointer flex items-center gap-3 transition-colors"
-					onclick={ selectSong(index, song.ID, fmt.Sprintf("%s - %s", song.Title, song.Artist)) }
+					onclick={ selectSong(index, song.ID, song.Title, song.Artist) }
 				>
 					<img src={ song.Thumbnail } class="w-10 h-10 rounded object-cover bg-slate-700"/>
 					<div class="overflow-hidden">
@@ -63,13 +65,17 @@ templ SearchResults(index int, songs []SongResult) {
 	}
 }
 
-script selectSong(index int, id string, display string) {
+script selectSong(index int, id string, title string, artist string) {
 	const input = document.getElementsByName('song-' + index)[0];
 	const idInput = document.getElementById('id-' + index);
+	const titleInput = document.getElementById('title-' + index);
+	const artistInput = document.getElementById('artist-' + index);
 	const results = document.getElementById('results-' + index);
 	
-	input.value = display;
+	input.value = title + " - " + artist;
 	idInput.value = id;
+	titleInput.value = title;
+	artistInput.value = artist;
 	results.innerHTML = '';
 }
 

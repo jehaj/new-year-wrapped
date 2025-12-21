@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/raitonoberu/ytmusic"
 )
 
 var db *sql.DB
@@ -81,16 +82,60 @@ func handleSongSearch(c echo.Context) error {
 		return c.HTML(http.StatusOK, "")
 	}
 
-	// Mock search results
-	results := []view.SongResult{
-		{ID: "yt-1", Title: query + " (Official Video)", Artist: "Popular Artist", Thumbnail: "https://via.placeholder.com/40"},
-		{ID: "yt-2", Title: query + " (Live)", Artist: "Popular Artist", Thumbnail: "https://via.placeholder.com/40"},
-		{ID: "yt-3", Title: query + " (Remix)", Artist: "DJ Remix", Thumbnail: "https://via.placeholder.com/40"},
+	search := ytmusic.Search(query)
+	results, err := search.Next()
+	if err != nil {
+		return err
+	}
+
+	var songResults []view.SongResult
+	// Combine tracks and videos for better results
+	for _, item := range results.Tracks {
+		artistName := ""
+		if len(item.Artists) > 0 {
+			artistName = item.Artists[0].Name
+		}
+		thumb := ""
+		if len(item.Thumbnails) > 0 {
+			thumb = item.Thumbnails[0].URL
+		}
+		songResults = append(songResults, view.SongResult{
+			ID:        item.VideoID,
+			Title:     item.Title,
+			Artist:    artistName,
+			Thumbnail: thumb,
+		})
+		if len(songResults) >= 5 {
+			break
+		}
+	}
+
+	if len(songResults) < 5 {
+		for _, item := range results.Videos {
+			artistName := ""
+			if len(item.Artists) > 0 {
+				artistName = item.Artists[0].Name
+			}
+			thumb := ""
+			if len(item.Thumbnails) > 0 {
+				thumb = item.Thumbnails[0].URL
+			}
+			songResults = append(songResults, view.SongResult{
+				ID:        item.VideoID,
+				Title:     item.Title,
+				Artist:    artistName,
+				Thumbnail: thumb,
+			})
+			if len(songResults) >= 8 {
+				break
+			}
+		}
 	}
 
 	c.Response().Header().Set("Content-Type", "text/html")
-	return view.SearchResults(index, results).Render(c.Request().Context(), c.Response().Writer)
+	return view.SearchResults(index, songResults).Render(c.Request().Context(), c.Response().Writer)
 }
+
 func handleSubmitSongs(c echo.Context) error {
 	partyID := c.Param("id")
 	name := c.FormValue("name")
@@ -111,20 +156,18 @@ func handleSubmitSongs(c echo.Context) error {
 
 	// Insert songs
 	for i := 1; i <= 3; i++ {
-		titleArtist := c.FormValue(fmt.Sprintf("song-%d", i))
+		title := c.FormValue(fmt.Sprintf("song-title-%d", i))
+		artist := c.FormValue(fmt.Sprintf("song-artist-%d", i))
 		youtubeID := c.FormValue(fmt.Sprintf("song-id-%d", i))
 
-		if titleArtist != "" && youtubeID != "" {
-			// Simple split for title/artist if we have it, or just store as title
-			// In a real app, we'd have separate fields from the search result
+		if title != "" && youtubeID != "" {
 			_, err = tx.Exec("INSERT INTO songs (user_id, title, artist, youtube_id) VALUES (?, ?, ?, ?)",
-				userID, titleArtist, "", youtubeID)
+				userID, title, artist, youtubeID)
 			if err != nil {
 				return err
 			}
 		}
 	}
-
 	if err := tx.Commit(); err != nil {
 		return err
 	}
