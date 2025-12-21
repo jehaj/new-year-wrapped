@@ -36,8 +36,12 @@ templ SongInput(index int) {
 			hx-get="/search-songs"
 			hx-trigger="keyup changed delay:500ms"
 			hx-target={ fmt.Sprintf("#results-%d", index) }
+			onfocus="if(this.getAttribute('data-selected') == 'true') { this.select(); }"
+			oninput={ handleInput(index) }
+			onblur={ handleBlur(index) }
 			class="w-full p-2 rounded bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none"
 			autocomplete="off"
+			data-selected="false"
 		/>
 		<input type="hidden" name={ fmt.Sprintf("song-id-%d", index) } id={ fmt.Sprintf("id-%d", index) }/>
 		<input type="hidden" name={ fmt.Sprintf("song-title-%d", index) } id={ fmt.Sprintf("title-%d", index) }/>
@@ -86,10 +90,24 @@ script selectSong(index int, id string, title string, artist string) {
 	const results = document.getElementById('results-' + index);
 	
 	input.value = title + " - " + artist;
+	input.setAttribute('data-selected', 'true');
 	idInput.value = id;
 	titleInput.value = title;
 	artistInput.value = artist;
 	results.innerHTML = '';
+}
+
+script handleInput(index int) {
+	const input = document.getElementsByName('song-' + index)[0];
+	input.setAttribute('data-selected', 'false');
+	document.getElementById('id-' + index).value = '';
+}
+
+script handleBlur(index int) {
+	setTimeout(() => {
+		const r = document.getElementById('results-' + index);
+		if(r) r.innerHTML = '';
+	}, 200);
 }
 
 type SongResult struct {
