@@ -54,7 +54,10 @@ templ SearchResults(index int, songs []SongResult) {
 					class="px-4 py-2 hover:bg-slate-700 cursor-pointer flex items-center gap-3 transition-colors"
 					onclick={ selectSong(index, song.ID, song.Title, song.Artist) }
 				>
-					<img src={ song.Thumbnail } class="w-10 h-10 rounded object-cover bg-slate-700"/>
+					<img 
+						data-src={ song.Thumbnail }
+						class="w-10 h-10 rounded object-cover bg-slate-700 opacity-0 transition-opacity duration-300 song-thumb"
+					/>
 					<div class="overflow-hidden">
 						<div class="font-medium truncate">{ song.Title }</div>
 						<div class="text-xs text-slate-400 truncate">{ song.Artist }</div>
@@ -62,6 +65,16 @@ templ SearchResults(index int, songs []SongResult) {
 				</div>
 			}
 		</div>
+		<script type="text/javascript">
+			(function() {
+				const thumbs = document.querySelectorAll('.song-thumb');
+				thumbs.forEach((img, i) => {
+					if (img.dataset.src && !img.src) {
+						loadImageWithRetry(img, img.dataset.src, (i + 1) * 500);
+					}
+				});
+			})();
+		</script>
 	}
 }
 

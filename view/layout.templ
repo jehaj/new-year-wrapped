@@ -9,6 +9,23 @@ templ Layout(title string) {
 			<title>{ title }</title>
 			<script src="https://unpkg.com/htmx.org@1.9.10"></script>
 			<script src="https://cdn.tailwindcss.com"></script>
+			<script>
+				function loadImageWithRetry(img, url, delay = 500, retries = 5) {
+					setTimeout(() => {
+						const newImg = new Image();
+						newImg.onload = () => {
+							img.src = url;
+							img.classList.remove('opacity-0');
+						};
+						newImg.onerror = () => {
+							if (retries > 0) {
+								loadImageWithRetry(img, url, delay * 2, retries - 1);
+							}
+						};
+						newImg.src = url;
+					}, delay);
+				}
+			</script>
 		</head>
 		<body class="bg-slate-900 text-white min-h-screen">
 			<main class="container mx-auto px-4 py-8">
