@@ -1,0 +1,81 @@
+package view
+
+import "fmt"
+
+templ JoinPage(partyID string) {
+	@Layout("Join Party") {
+		<div class="max-w-md mx-auto">
+			<h1 class="text-3xl font-bold mb-6 text-center">New Year Wrapped</h1>
+			<form hx-post={ "/party/" + partyID + "/submit-songs" } hx-swap="outerHTML">
+				<div class="mb-6">
+					<label class="block text-sm font-medium mb-2">Your Name</label>
+					<input type="text" name="name" required class="w-full p-2 rounded bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none"/>
+				</div>
+				
+				<h2 class="text-xl font-semibold mb-4">Your Top 3 Songs</h2>
+				
+				for i := 1; i <= 3; i++ {
+					@SongInput(i)
+				}
+
+				<button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+					Submit Songs
+				</button>
+			</form>
+		</div>
+	}
+}
+
+templ SongInput(index int) {
+	<div class="mb-4 relative">
+		<label class="block text-sm font-medium mb-2">Song { fmt.Sprint(index) }</label>
+		<input 
+			type="text" 
+			name={ fmt.Sprintf("song-%d", index) }
+			placeholder="Search for a song..."
+			hx-get="/search-songs"
+			hx-trigger="keyup changed delay:500ms"
+			hx-target={ fmt.Sprintf("#results-%d", index) }
+			class="w-full p-2 rounded bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none"
+			autocomplete="off"
+		/>
+		<input type="hidden" name={ fmt.Sprintf("song-id-%d", index) } id={ fmt.Sprintf("id-%d", index) }/>
+		<div id={ fmt.Sprintf("results-%d", index) } class="absolute z-10 w-full bg-slate-800 border border-slate-700 rounded-b mt-1 empty:hidden"></div>
+	</div>
+}
+
+templ SearchResults(index int, songs []SongResult) {
+	if len(songs) > 0 {
+		<div class="py-1 bg-slate-800 border border-slate-700 rounded shadow-xl">
+			for _, song := range songs {
+				<div 
+					class="px-4 py-2 hover:bg-slate-700 cursor-pointer flex items-center gap-3 transition-colors"
+					onclick={ selectSong(index, song.ID, fmt.Sprintf("%s - %s", song.Title, song.Artist)) }
+				>
+					<img src={ song.Thumbnail } class="w-10 h-10 rounded object-cover bg-slate-700"/>
+					<div class="overflow-hidden">
+						<div class="font-medium truncate">{ song.Title }</div>
+						<div class="text-xs text-slate-400 truncate">{ song.Artist }</div>
+					</div>
+				</div>
+			}
+		</div>
+	}
+}
+
+script selectSong(index int, id string, display string) {
+	const input = document.getElementsByName('song-' + index)[0];
+	const idInput = document.getElementById('id-' + index);
+	const results = document.getElementById('results-' + index);
+	
+	input.value = display;
+	idInput.value = id;
+	results.innerHTML = '';
+}
+
+type SongResult struct {
+	ID        string
+	Title     string
+	Artist    string
+	Thumbnail string
+}
