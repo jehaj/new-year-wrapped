@@ -22,14 +22,16 @@ A Spotify Wrapped-themed competition website using YouTube Music data. Friends j
 - **Testing Database**: Use `:memory:` for SQLite tests to ensure isolation and speed.
 - **Commands**:
     - Run tests: `go test ./...`
-    - Run app: `go run main.go` (or equivalent entry point)
+    - Run app: `go run cmd/server/main.go`
 
 ## Coding Conventions
 - **Simplicity First**: Avoid over-engineering. Prefer standard library where possible.
+- **Routing**: Use Go 1.22+ `http.ServeMux` with path parameters (e.g., `r.PathValue("id")`).
 - **Database**: Use clean SQL queries or a simple wrapper.
 - **UI**: Maintain the "Spotify Wrapped" aesthetic using Pico CSS components.
 
 ## Key Files & Directories
 - `static/`: Local assets including Pico CSS.
-- `internal/`: Business logic and database operations.
-- `cmd/`: Application entry points.
+- `internal/party/`: Party management logic and handlers.
+- `internal/db/`: Database initialization and schema.
+- `cmd/server/main.go`: Application entry point.
