@@ -2,17 +2,190 @@ package party
 
 import (
 	"encoding/json"
+	"fmt"
+	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
 type Handler struct {
-	service *Service
+	service   *Service
+	templates *template.Template
 }
 
 func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+	tmpl, _ := template.ParseGlob("templates/*.html")
+	return &Handler{
+		service:   service,
+		templates: tmpl,
+	}
+}
+
+// UI Handlers
+
+func (h *Handler) IndexPage(w http.ResponseWriter, r *http.Request) {
+	if h.templates == nil {
+		http.Error(w, "templates not loaded", http.StatusInternalServerError)
+		return
+	}
+	h.templates.ExecuteTemplate(w, "layout", nil)
+}
+
+func (h *Handler) PartyPage(w http.ResponseWriter, r *http.Request) {
+	if h.templates == nil {
+		http.Error(w, "templates not loaded", http.StatusInternalServerError)
+		return
+	}
+	partyID := h.getPartyID(r)
+	if partyID == "" {
+		partyID = r.URL.Query().Get("id")
+	}
+	if partyID == "" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	userName := r.URL.Query().Get("user")
+
+	started, _, err := h.service.GetPartyState(r.Context(), partyID)
+	if err == nil && started {
+		http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?user=%s", partyID, userName), http.StatusSeeOther)
+		return
+	}
+
+	users, _ := h.service.GetUsers(r.Context(), partyID)
+
+	data := map[string]interface{}{
+		"Party": map[string]string{
+			"ID":   partyID,
+			"Name": "Party " + partyID,
+		},
+		"Users":      users,
+		"UserJoined": userName != "",
+		"UserName":   userName,
+		"IsAdmin":    r.URL.Query().Get("admin") == "true",
+	}
+
+	h.templates.ExecuteTemplate(w, "layout", data)
+}
+
+func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
+	if h.templates == nil {
+		http.Error(w, "templates not loaded", http.StatusInternalServerError)
+		return
+	}
+	partyID := h.getPartyID(r)
+	userName := r.URL.Query().Get("user")
+
+	started, currentRound, err := h.service.GetPartyState(r.Context(), partyID)
+	if err != nil || !started {
+		http.Redirect(w, r, "/parties/"+partyID, http.StatusSeeOther)
+		return
+	}
+
+	songs, _ := h.service.GetRoundSongs(r.Context(), partyID, currentRound)
+	users, _ := h.service.GetUsers(r.Context(), partyID)
+	leaderboard, _ := h.service.GetLeaderboard(r.Context(), partyID, 0)
+
+	var previousResults []SongResult
+	if currentRound > 1 {
+		previousResults, _ = h.service.GetRoundResults(r.Context(), partyID, currentRound-1)
+	}
+
+	data := map[string]interface{}{
+		"Party": map[string]string{
+			"ID":   partyID,
+			"Name": "Party " + partyID,
+		},
+		"CurrentRound":    currentRound,
+		"Songs":           songs,
+		"Users":           users,
+		"UserName":        userName,
+		"Leaderboard":     leaderboard,
+		"PreviousResults": previousResults,
+		"IsAdmin":         r.URL.Query().Get("admin") == "true",
+	}
+
+	h.templates.ExecuteTemplate(w, "layout", data)
+}
+
+// UI Action Handlers (Form Submissions)
+
+func (h *Handler) UICreateParty(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	name := r.FormValue("name")
+	id := strings.ToUpper(strconv.FormatInt(int64(len(name))+1000, 36))
+
+	if err := h.service.CreateParty(r.Context(), id, name); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/parties/%s?admin=true", id), http.StatusSeeOther)
+}
+
+func (h *Handler) UIJoinParty(w http.ResponseWriter, r *http.Request) {
+	partyID := h.getPartyID(r)
+	userName := r.FormValue("user_name")
+	songs := []string{
+		r.FormValue("song1"),
+		r.FormValue("song2"),
+		r.FormValue("song3"),
+	}
+
+	if err := h.service.JoinParty(r.Context(), partyID, userName, songs); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/parties/%s?user=%s", partyID, userName), http.StatusSeeOther)
+}
+
+func (h *Handler) UIStartCompetition(w http.ResponseWriter, r *http.Request) {
+	partyID := h.getPartyID(r)
+	if err := h.service.StartCompetition(r.Context(), partyID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?admin=true", partyID), http.StatusSeeOther)
+}
+
+func (h *Handler) UINextRound(w http.ResponseWriter, r *http.Request) {
+	partyID := h.getPartyID(r)
+	if err := h.service.NextRound(r.Context(), partyID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?admin=true", partyID), http.StatusSeeOther)
+}
+
+func (h *Handler) UIGuess(w http.ResponseWriter, r *http.Request) {
+	partyID := h.getPartyID(r)
+	userName := r.FormValue("user_name")
+	songID, _ := strconv.Atoi(r.FormValue("song_id"))
+	ownerName := r.FormValue("owner_name")
+
+	users, _ := h.service.GetUsers(r.Context(), partyID)
+	var guesserID, ownerID int
+	for _, u := range users {
+		if u.Name == userName {
+			guesserID = u.ID
+		}
+		if u.Name == ownerName {
+			ownerID = u.ID
+		}
+	}
+
+	if guesserID != 0 && ownerID != 0 {
+		h.service.SubmitGuess(r.Context(), guesserID, songID, ownerID)
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?user=%s", partyID, userName), http.StatusSeeOther)
 }
 
 func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {

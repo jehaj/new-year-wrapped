@@ -31,14 +31,21 @@ func main() {
 	mux.HandleFunc("POST /parties/{id}/guess", partyHandler.SubmitGuess)
 	mux.HandleFunc("GET /parties/{id}/leaderboard", partyHandler.GetLeaderboard)
 
+	// UI Routes
+	mux.HandleFunc("GET /", partyHandler.IndexPage)
+	mux.HandleFunc("GET /parties/{id}", partyHandler.PartyPage)
+	mux.HandleFunc("GET /parties/{id}/game", partyHandler.GamePage)
+
+	// UI Action Routes
+	mux.HandleFunc("POST /ui/parties/create", partyHandler.UICreateParty)
+	mux.HandleFunc("POST /ui/parties/{id}/join", partyHandler.UIJoinParty)
+	mux.HandleFunc("POST /ui/parties/{id}/start", partyHandler.UIStartCompetition)
+	mux.HandleFunc("POST /ui/parties/{id}/next", partyHandler.UINextRound)
+	mux.HandleFunc("POST /ui/parties/{id}/guess", partyHandler.UIGuess)
+
 	// Static Files
 	fs := http.FileServer(http.Dir("static"))
 	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
-
-	// Frontend Routes
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "static/index.html")
-	})
 
 	log.Println("Server starting on :8080")
 	if err := http.ListenAndServe(":8080", mux); err != nil {

@@ -1,0 +1,206 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Year Wrapped</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <style>
+        :root {
+            --primary: #1db954;
+            --primary-hover: #1ed760;
+            --background-color: #121212;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: white;
+        }
+
+        .hero {
+            padding: 2rem 0;
+            text-align: center;
+            background: linear-gradient(135deg, #1db954 0%, #191414 100%);
+            margin-bottom: 2rem;
+            border-radius: 0 0 2rem 2rem;
+        }
+
+        .card {
+            background-color: #181818;
+            border: 1px solid #282828;
+        }
+
+        button {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            border-radius: 2rem;
+            font-weight: bold;
+        }
+
+        button.secondary {
+            background-color: transparent;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+    <header class="hero">
+        <div class="container">
+            <h1>🎉 New Year Wrapped</h1>
+            {{if .Party}}<h2>{{.Party.Name}}</h2>{{end}}
+        </div>
+    </header>
+
+    <main class="container">
+        {{if not .Party}}
+        {{template "index" .}}
+        {{else if .Songs}}
+        {{template "game" .}}
+        {{else}}
+        {{template "party" .}}
+        {{end}}
+    </main>
+</body>
+
+</html>
+{{end}}
+
+{{define "index"}}
+<section id="setup">
+    <div class="grid">
+        <article class="card">
+            <h3>Create a Party</h3>
+            <form action="/ui/parties/create" method="POST">
+                <input type="text" name="name" placeholder="Party Name" required>
+                <button type="submit">Create Party</button>
+            </form>
+        </article>
+
+        <article class="card">
+            <h3>Join a Party</h3>
+            <form action="/parties" method="GET">
+                <input type="text" name="id" placeholder="Party ID" required>
+                <button type="submit" class="secondary">Join Party</button>
+            </form>
+        </article>
+    </div>
+</section>
+{{end}}
+
+{{define "party"}}
+<section id="party-room">
+    <p>Party ID: <code>{{.Party.ID}}</code></p>
+
+    {{if not .UserJoined}}
+    <div id="join-section">
+        <h3>Join the Party</h3>
+        <form action="/ui/parties/{{.Party.ID}}/join" method="POST">
+            <input type="text" name="user_name" placeholder="Your Name" required>
+            <fieldset>
+                <legend>Your Top 3 Songs</legend>
+                <input type="text" name="song1" placeholder="Song 1" required>
+                <input type="text" name="song2" placeholder="Song 2" required>
+                <input type="text" name="song3" placeholder="Song 3" required>
+            </fieldset>
+            <button type="submit">Submit & Join</button>
+        </form>
+    </div>
+    {{else}}
+    <div id="waiting-room">
+        <h3>Waiting for players...</h3>
+        <ul>
+            {{range .Users}}<li>{{.Name}}</li>{{end}}
+        </ul>
+        <div class="grid">
+            {{if .IsAdmin}}
+            <form action="/ui/parties/{{.Party.ID}}/start" method="POST">
+                <button type="submit">Start Competition</button>
+            </form>
+            {{else}}
+            <p>Waiting for admin to start...</p>
+            {{end}}
+            <form action="/parties/{{.Party.ID}}" method="GET">
+                <input type="hidden" name="user" value="{{.UserName}}">
+                {{if .IsAdmin}}<input type="hidden" name="admin" value="true">{{end}}
+                <button type="submit" class="secondary">Refresh Players</button>
+            </form>
+        </div>
+    </div>
+    {{end}}
+</section>
+{{end}}
+
+{{define "game"}}
+<section id="game-room">
+    <h3>Round {{.CurrentRound}}</h3>
+
+    <div id="songs-to-guess">
+        {{range .Songs}}
+        <article class="card">
+            <header>🎵 {{.Title}}</header>
+            <form action="/ui/parties/{{$.Party.ID}}/guess" method="POST">
+                <input type="hidden" name="user_name" value="{{$.UserName}}">
+                <input type="hidden" name="song_id" value="{{.ID}}">
+                <select name="owner_name" onchange="this.form.submit()">
+                    <option value="">Who's song is this?</option>
+                    {{range $.Users}}
+                    <option value="{{.Name}}">{{.Name}}</option>
+                    {{end}}
+                </select>
+            </form>
+        </article>
+        {{else}}
+        <p>No more songs this round!</p>
+        {{end}}
+    </div>
+
+    {{if .PreviousResults}}
+    <div id="round-results" style="margin-top: 2rem;">
+        <h3>Previous Round Results</h3>
+        <ul>
+            {{range .PreviousResults}}
+            <li><strong>{{.SongTitle}}</strong> was by <strong>{{.OwnerName}}</strong></li>
+            {{end}}
+        </ul>
+    </div>
+    {{end}}
+
+    <div id="leaderboard-section" style="margin-top: 2rem;">
+        <h3>Leaderboard</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Leaderboard}}
+                <tr>
+                    <td>{{.UserName}}</td>
+                    <td>{{.Score}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="grid">
+        {{if .IsAdmin}}
+        <form action="/ui/parties/{{.Party.ID}}/next" method="POST">
+            <button type="submit">Next Round</button>
+        </form>
+        {{end}}
+
+        <form action="/parties/{{.Party.ID}}/game" method="GET">
+            <input type="hidden" name="user" value="{{.UserName}}">
+            {{if .IsAdmin}}<input type="hidden" name="admin" value="true">{{end}}
+            <button type="submit" class="secondary">Refresh Round</button>
+        </form>
+    </div>
+</section>
+{{end}}
