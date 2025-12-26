@@ -150,3 +150,58 @@ func (s *Service) GetPartyState(ctx context.Context, partyID string) (started bo
 	err = s.db.QueryRowContext(ctx, "SELECT started, current_round FROM parties WHERE id = ?", partyID).Scan(&started, &currentRound)
 	return
 }
+
+type LeaderboardEntry struct {
+	UserName string `json:"user_name"`
+	Score    int    `json:"score"`
+}
+
+func (s *Service) SubmitGuess(ctx context.Context, guesserID, songID, guessedUserID int) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO guesses (guesser_id, song_id, guessed_user_id) 
+		VALUES (?, ?, ?)
+		ON CONFLICT(guesser_id, song_id) DO UPDATE SET guessed_user_id = excluded.guessed_user_id`,
+		guesserID, songID, guessedUserID)
+	return err
+}
+
+func (s *Service) GetLeaderboard(ctx context.Context, partyID string, round int) ([]LeaderboardEntry, error) {
+	query := `
+		SELECT u.name, COUNT(CASE WHEN g.guessed_user_id = s.user_id THEN 1 END) as score
+		FROM users u
+		JOIN parties p ON u.party_id = p.id
+		LEFT JOIN guesses g ON u.id = g.guesser_id
+		LEFT JOIN songs s ON g.song_id = s.id
+		WHERE u.party_id = ? AND s.round_number < p.current_round`
+
+	args := []interface{}{partyID}
+	if round > 0 {
+		query += " AND s.round_number = ?"
+		args = append(args, round)
+	}
+
+	query += `
+		GROUP BY u.id
+		ORDER BY score DESC`
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var leaderboard []LeaderboardEntry
+	for rows.Next() {
+		var entry LeaderboardEntry
+		if err := rows.Scan(&entry.UserName, &entry.Score); err != nil {
+			return nil, err
+		}
+		leaderboard = append(leaderboard, entry)
+	}
+	return leaderboard, nil
+}
+
+func (s *Service) NextRound(ctx context.Context, partyID string) error {
+	_, err := s.db.ExecContext(ctx, "UPDATE parties SET current_round = current_round + 1 WHERE id = ?", partyID)
+	return err
+}

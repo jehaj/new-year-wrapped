@@ -158,3 +158,70 @@ func TestHandler_Competition(t *testing.T) {
 		}
 	})
 }
+
+func TestHandler_Guessing(t *testing.T) {
+	db, _ := sql.Open("sqlite3", ":memory:")
+	defer db.Close()
+	_, _ = db.Exec(`
+		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT, started BOOLEAN DEFAULT FALSE, current_round INTEGER DEFAULT 0);
+		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
+		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, round_number INTEGER DEFAULT 0);
+		CREATE TABLE guesses (id INTEGER PRIMARY KEY AUTOINCREMENT, guesser_id INTEGER NOT NULL, song_id INTEGER NOT NULL, guessed_user_id INTEGER NOT NULL, UNIQUE(guesser_id, song_id));
+	`)
+	partyID := "guess-h"
+	_, _ = db.Exec("INSERT INTO parties (id, name, started, current_round) VALUES (?, ?, TRUE, 1)", partyID, "Guess Handler Party")
+
+	// Alice owns Song 1
+	res, _ := db.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
+	aliceID, _ := res.LastInsertId()
+	res, _ = db.Exec("INSERT INTO songs (user_id, title, round_number) VALUES (?, ?, 1)", aliceID, "Song 1")
+	song1ID, _ := res.LastInsertId()
+
+	// Bob is the guesser
+	res, _ = db.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Bob")
+	bobID, _ := res.LastInsertId()
+
+	service := party.NewService(db)
+	handler := party.NewHandler(service)
+
+	t.Run("Submit guess", func(t *testing.T) {
+		body, _ := json.Marshal(map[string]int{
+			"guesser_id":      int(bobID),
+			"song_id":         int(song1ID),
+			"guessed_user_id": int(aliceID),
+		})
+		req := httptest.NewRequest("POST", "/parties/"+partyID+"/guess", bytes.NewBuffer(body))
+		rr := httptest.NewRecorder()
+		handler.SubmitGuess(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", rr.Code)
+		}
+
+		// Reveal the round
+		handler.NextRound(httptest.NewRecorder(), httptest.NewRequest("POST", "/parties/"+partyID+"/next", nil))
+	})
+
+	t.Run("Get leaderboard", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/parties/"+partyID+"/leaderboard", nil)
+		rr := httptest.NewRecorder()
+		handler.GetLeaderboard(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", rr.Code)
+		}
+
+		var leaderboard []party.LeaderboardEntry
+		json.NewDecoder(rr.Body).Decode(&leaderboard)
+
+		found := false
+		for _, entry := range leaderboard {
+			if entry.UserName == "Bob" && entry.Score == 1 {
+				found = true
+			}
+		}
+		if !found {
+			t.Error("Bob with score 1 not found in leaderboard")
+		}
+	})
+}

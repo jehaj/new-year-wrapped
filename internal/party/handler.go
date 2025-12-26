@@ -3,6 +3,7 @@ package party
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -99,6 +100,67 @@ func (h *Handler) GetCurrentRound(w http.ResponseWriter, r *http.Request) {
 		"round": currentRound,
 		"songs": songs,
 	})
+}
+
+func (h *Handler) SubmitGuess(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		GuesserID     int `json:"guesser_id"`
+		SongID        int `json:"song_id"`
+		GuessedUserID int `json:"guessed_user_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.SubmitGuess(r.Context(), req.GuesserID, req.SongID, req.GuessedUserID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
+	partyID := h.getPartyID(r)
+	if partyID == "" {
+		http.Error(w, "missing party id", http.StatusBadRequest)
+		return
+	}
+
+	roundStr := r.URL.Query().Get("round")
+	round := 0
+	if roundStr != "" {
+		var err error
+		round, err = strconv.Atoi(roundStr)
+		if err != nil {
+			http.Error(w, "invalid round", http.StatusBadRequest)
+			return
+		}
+	}
+
+	leaderboard, err := h.service.GetLeaderboard(r.Context(), partyID, round)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(leaderboard)
+}
+
+func (h *Handler) NextRound(w http.ResponseWriter, r *http.Request) {
+	partyID := h.getPartyID(r)
+	if partyID == "" {
+		http.Error(w, "missing party id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.NextRound(r.Context(), partyID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) getPartyID(r *http.Request) string {

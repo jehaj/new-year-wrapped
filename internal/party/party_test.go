@@ -22,6 +22,7 @@ func TestJoinParty(t *testing.T) {
 		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT, started BOOLEAN DEFAULT FALSE, current_round INTEGER DEFAULT 0);
 		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
 		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, round_number INTEGER DEFAULT 0);
+		CREATE TABLE guesses (id INTEGER PRIMARY KEY AUTOINCREMENT, guesser_id INTEGER NOT NULL, song_id INTEGER NOT NULL, guessed_user_id INTEGER NOT NULL, UNIQUE(guesser_id, song_id));
 	`)
 	if err != nil {
 		t.Fatalf("failed to create schema: %v", err)
@@ -99,6 +100,7 @@ func TestStartCompetition(t *testing.T) {
 		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT, started BOOLEAN DEFAULT FALSE, current_round INTEGER DEFAULT 0);
 		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
 		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, round_number INTEGER DEFAULT 0);
+		CREATE TABLE guesses (id INTEGER PRIMARY KEY AUTOINCREMENT, guesser_id INTEGER NOT NULL, song_id INTEGER NOT NULL, guessed_user_id INTEGER NOT NULL, UNIQUE(guesser_id, song_id));
 	`)
 
 	partyID := "comp-party"
@@ -154,6 +156,64 @@ func TestStartCompetition(t *testing.T) {
 
 		if r1 != 5 || r2 != 5 || r3 != 2 {
 			t.Errorf("unexpected round distribution: r1=%d, r2=%d, r3=%d", r1, r2, r3)
+		}
+	})
+}
+
+func TestGuessingAndLeaderboard(t *testing.T) {
+	db, _ := sql.Open("sqlite3", ":memory:")
+	defer db.Close()
+	_, _ = db.Exec(`
+		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT, started BOOLEAN DEFAULT FALSE, current_round INTEGER DEFAULT 0);
+		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
+		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, round_number INTEGER DEFAULT 0);
+		CREATE TABLE guesses (id INTEGER PRIMARY KEY AUTOINCREMENT, guesser_id INTEGER NOT NULL, song_id INTEGER NOT NULL, guessed_user_id INTEGER NOT NULL, UNIQUE(guesser_id, song_id));
+	`)
+
+	partyID := "guess-party"
+	_, _ = db.Exec("INSERT INTO parties (id, name, started, current_round) VALUES (?, ?, TRUE, 1)", partyID, "Guess Party")
+
+	service := party.NewService(db)
+
+	// Alice owns Song 1
+	res, _ := db.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
+	aliceID, _ := res.LastInsertId()
+	res, _ = db.Exec("INSERT INTO songs (user_id, title, round_number) VALUES (?, ?, 1)", aliceID, "Song 1")
+	song1ID, _ := res.LastInsertId()
+
+	// Bob is the guesser
+	res, _ = db.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Bob")
+	bobID, _ := res.LastInsertId()
+
+	t.Run("Submit correct guess", func(t *testing.T) {
+		err := service.SubmitGuess(context.Background(), int(bobID), int(song1ID), int(aliceID))
+		if err != nil {
+			t.Fatalf("SubmitGuess failed: %v", err)
+		}
+
+		// Reveal the round
+		err = service.NextRound(context.Background(), partyID)
+		if err != nil {
+			t.Fatalf("NextRound failed: %v", err)
+		}
+
+		leaderboard, err := service.GetLeaderboard(context.Background(), partyID, 0)
+		if err != nil {
+			t.Fatalf("GetLeaderboard failed: %v", err)
+		}
+
+		// Bob should have 1 point
+		found := false
+		for _, entry := range leaderboard {
+			if entry.UserName == "Bob" {
+				found = true
+				if entry.Score != 1 {
+					t.Errorf("expected score 1 for Bob, got %d", entry.Score)
+				}
+			}
+		}
+		if !found {
+			t.Error("Bob not found in leaderboard")
 		}
 	})
 }

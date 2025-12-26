@@ -24,7 +24,10 @@ func main() {
 	mux.HandleFunc("POST /parties", partyHandler.CreateParty)
 	mux.HandleFunc("POST /parties/{id}/join", partyHandler.JoinParty)
 	mux.HandleFunc("POST /parties/{id}/start", partyHandler.StartCompetition)
+	mux.HandleFunc("POST /parties/{id}/next", partyHandler.NextRound)
 	mux.HandleFunc("GET /parties/{id}/round", partyHandler.GetCurrentRound)
+	mux.HandleFunc("POST /parties/{id}/guess", partyHandler.SubmitGuess)
+	mux.HandleFunc("GET /parties/{id}/leaderboard", partyHandler.GetLeaderboard)
 
 	log.Println("Server starting on :8080")
 	if err := http.ListenAndServe(":8080", mux); err != nil {
