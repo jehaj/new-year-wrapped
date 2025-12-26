@@ -26,7 +26,7 @@ func TestJoinParty(t *testing.T) {
 
 	// Create a mocked party
 	partyID := "test-party"
-	_, err = database.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", partyID, "Test Party")
+	_, err = database.Exec("INSERT INTO parties (id, name, admin_token) VALUES (?, ?, ?)", partyID, "Test Party", "test-token")
 	if err != nil {
 		t.Fatalf("failed to insert party: %v", err)
 	}
@@ -79,12 +79,15 @@ func TestJoinParty(t *testing.T) {
 	t.Run("Create Party", func(t *testing.T) {
 		// Given: A database connection
 		// When: A new party is created
-		// Then: The party exists in the database with the correct name
-		id := "new-party"
+		// Then: The party exists in the database with the correct name and a token is returned
 		name := "New Year 2025"
-		err := service.CreateParty(context.Background(), id, name)
+		id, token, err := service.CreateParty(context.Background(), name)
 		if err != nil {
 			t.Errorf("CreateParty failed: %v", err)
+		}
+
+		if id == "" || token == "" {
+			t.Errorf("expected non-empty id and token, got id=%s, token=%s", id, token)
 		}
 
 		var dbName string
@@ -95,6 +98,15 @@ func TestJoinParty(t *testing.T) {
 		if dbName != name {
 			t.Errorf("expected name %s, got %s", name, dbName)
 		}
+
+		// Verify admin token
+		isAdmin, err := service.VerifyAdmin(context.Background(), id, token)
+		if err != nil {
+			t.Fatalf("VerifyAdmin failed: %v", err)
+		}
+		if !isAdmin {
+			t.Error("expected token to be valid admin token")
+		}
 	})
 }
 
@@ -104,7 +116,7 @@ func TestStartCompetition(t *testing.T) {
 	_, _ = database.Exec(db.Schema)
 
 	partyID := "comp-party"
-	_, _ = database.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", partyID, "Comp Party")
+	_, _ = database.Exec("INSERT INTO parties (id, name, admin_token) VALUES (?, ?, ?)", partyID, "Comp Party", "token")
 
 	service := party.NewService(database, nil)
 
@@ -158,7 +170,7 @@ func TestGuessingAndLeaderboard(t *testing.T) {
 	_, _ = database.Exec(db.Schema)
 
 	partyID := "guess-party"
-	_, _ = database.Exec("INSERT INTO parties (id, name, started, current_round) VALUES (?, ?, TRUE, 1)", partyID, "Guess Party")
+	_, _ = database.Exec("INSERT INTO parties (id, name, admin_token, started, current_round) VALUES (?, ?, ?, TRUE, 1)", partyID, "Guess Party", "token")
 
 	service := party.NewService(database, nil)
 
@@ -222,8 +234,7 @@ func TestGetUsers(t *testing.T) {
 	svc := party.NewService(dbConn, nil)
 	ctx := context.Background()
 
-	partyID := "test-party"
-	svc.CreateParty(ctx, partyID, "Test Party")
+	partyID, _, _ := svc.CreateParty(ctx, "Test Party")
 	svc.JoinParty(ctx, partyID, "Alice", []string{"S1", "S2", "S3"})
 	svc.JoinParty(ctx, partyID, "Bob", []string{"S4", "S5", "S6"})
 
@@ -254,8 +265,7 @@ func TestGetRoundResults(t *testing.T) {
 	svc := party.NewService(dbConn, nil)
 	ctx := context.Background()
 
-	partyID := "test-party"
-	svc.CreateParty(ctx, partyID, "Test Party")
+	partyID, _, _ := svc.CreateParty(ctx, "Test Party")
 	svc.JoinParty(ctx, partyID, "Alice", []string{"S1", "S2", "S3"})
 	svc.JoinParty(ctx, partyID, "Bob", []string{"S4", "S5", "S6"})
 

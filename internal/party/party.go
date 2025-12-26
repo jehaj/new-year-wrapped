@@ -69,10 +69,28 @@ func (s *Service) JoinParty(ctx context.Context, partyID string, userName string
 	return tx.Commit()
 }
 
-func (s *Service) CreateParty(ctx context.Context, id string, name string) error {
+func (s *Service) generateRandomString(n int) string {
+	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
+func (s *Service) CreateParty(ctx context.Context, name string) (id string, adminToken string, err error) {
+	id = s.generateRandomString(6)
+	adminToken = s.generateRandomString(12)
+
 	s.log(id, "Creating party: %s", name)
-	_, err := s.db.ExecContext(ctx, "INSERT INTO parties (id, name) VALUES (?, ?)", id, name)
-	return err
+	_, err = s.db.ExecContext(ctx, "INSERT INTO parties (id, name, admin_token) VALUES (?, ?, ?)", id, name, adminToken)
+	return id, adminToken, err
+}
+
+func (s *Service) VerifyAdmin(ctx context.Context, partyID, token string) (bool, error) {
+	var exists bool
+	err := s.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM parties WHERE id = ? AND admin_token = ?)", partyID, token).Scan(&exists)
+	return exists, err
 }
 
 func (s *Service) StartCompetition(ctx context.Context, partyID string) error {

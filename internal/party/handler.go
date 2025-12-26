@@ -47,14 +47,16 @@ func (h *Handler) PartyPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userName := r.URL.Query().Get("user")
+	adminToken := r.URL.Query().Get("admin_token")
 
 	started, _, err := h.service.GetPartyState(r.Context(), partyID)
 	if err == nil && started {
-		http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?user=%s", partyID, userName), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?user=%s&admin_token=%s", partyID, userName, adminToken), http.StatusSeeOther)
 		return
 	}
 
 	users, _ := h.service.GetUsers(r.Context(), partyID)
+	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
 
 	data := map[string]interface{}{
 		"Party": map[string]string{
@@ -64,7 +66,8 @@ func (h *Handler) PartyPage(w http.ResponseWriter, r *http.Request) {
 		"Users":      users,
 		"UserJoined": userName != "",
 		"UserName":   userName,
-		"IsAdmin":    r.URL.Query().Get("admin") == "true",
+		"AdminToken": adminToken,
+		"IsAdmin":    isAdmin,
 	}
 
 	h.templates.ExecuteTemplate(w, "layout", data)
@@ -77,6 +80,7 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 	}
 	partyID := h.getPartyID(r)
 	userName := r.URL.Query().Get("user")
+	adminToken := r.URL.Query().Get("admin_token")
 
 	started, currentRound, err := h.service.GetPartyState(r.Context(), partyID)
 	if err != nil || !started {
@@ -87,6 +91,7 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 	songs, _ := h.service.GetRoundSongs(r.Context(), partyID, currentRound)
 	users, _ := h.service.GetUsers(r.Context(), partyID)
 	leaderboard, _ := h.service.GetLeaderboard(r.Context(), partyID, 0)
+	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
 
 	var previousResults []SongResult
 	if currentRound > 1 {
@@ -102,9 +107,10 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 		"Songs":           songs,
 		"Users":           users,
 		"UserName":        userName,
+		"AdminToken":      adminToken,
 		"Leaderboard":     leaderboard,
 		"PreviousResults": previousResults,
-		"IsAdmin":         r.URL.Query().Get("admin") == "true",
+		"IsAdmin":         isAdmin,
 	}
 
 	h.templates.ExecuteTemplate(w, "layout", data)
@@ -119,19 +125,19 @@ func (h *Handler) UICreateParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	name := r.FormValue("name")
-	id := strings.ToUpper(strconv.FormatInt(int64(len(name))+1000, 36))
-
-	if err := h.service.CreateParty(r.Context(), id, name); err != nil {
+	id, adminToken, err := h.service.CreateParty(r.Context(), name)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/parties/%s?admin=true", id), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/parties/%s?admin_token=%s", id, adminToken), http.StatusSeeOther)
 }
 
 func (h *Handler) UIJoinParty(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	userName := r.FormValue("user_name")
+	adminToken := r.FormValue("admin_token")
 	songs := []string{
 		r.FormValue("song1"),
 		r.FormValue("song2"),
@@ -143,30 +149,47 @@ func (h *Handler) UIJoinParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/parties/%s?user=%s", partyID, userName), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/parties/%s?user=%s&admin_token=%s", partyID, userName, adminToken), http.StatusSeeOther)
 }
 
 func (h *Handler) UIStartCompetition(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
+	adminToken := r.FormValue("admin_token")
+
+	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
+	if !isAdmin {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	if err := h.service.StartCompetition(r.Context(), partyID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?admin=true", partyID), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?admin_token=%s", partyID, adminToken), http.StatusSeeOther)
 }
 
 func (h *Handler) UINextRound(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
+	adminToken := r.FormValue("admin_token")
+
+	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
+	if !isAdmin {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	if err := h.service.NextRound(r.Context(), partyID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?admin=true", partyID), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?admin_token=%s", partyID, adminToken), http.StatusSeeOther)
 }
 
 func (h *Handler) UIGuess(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	userName := r.FormValue("user_name")
+	adminToken := r.FormValue("admin_token")
 	songID, _ := strconv.Atoi(r.FormValue("song_id"))
 	ownerName := r.FormValue("owner_name")
 
@@ -185,12 +208,11 @@ func (h *Handler) UIGuess(w http.ResponseWriter, r *http.Request) {
 		h.service.SubmitGuess(r.Context(), guesserID, songID, ownerID)
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?user=%s", partyID, userName), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?user=%s&admin_token=%s", partyID, userName, adminToken), http.StatusSeeOther)
 }
 
 func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		ID   string `json:"id"`
 		Name string `json:"name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -198,12 +220,17 @@ func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.CreateParty(r.Context(), req.ID, req.Name); err != nil {
+	id, adminToken, err := h.service.CreateParty(r.Context(), req.Name)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{
+		"id":          id,
+		"admin_token": adminToken,
+	})
 }
 
 func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {

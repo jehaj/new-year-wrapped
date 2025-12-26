@@ -99,6 +99,7 @@
     <div id="join-section">
         <h3>Join the Party</h3>
         <form action="/ui/parties/{{.Party.ID}}/join" method="POST">
+            <input type="hidden" name="admin_token" value="{{.AdminToken}}">
             <input type="text" name="user_name" placeholder="Your Name" required>
             <fieldset>
                 <legend>Your Top 3 Songs</legend>
@@ -118,6 +119,7 @@
         <div class="grid">
             {{if .IsAdmin}}
             <form action="/ui/parties/{{.Party.ID}}/start" method="POST">
+                <input type="hidden" name="admin_token" value="{{.AdminToken}}">
                 <button type="submit">Start Competition</button>
             </form>
             {{else}}
@@ -125,7 +127,7 @@
             {{end}}
             <form action="/parties/{{.Party.ID}}" method="GET">
                 <input type="hidden" name="user" value="{{.UserName}}">
-                {{if .IsAdmin}}<input type="hidden" name="admin" value="true">{{end}}
+                <input type="hidden" name="admin_token" value="{{.AdminToken}}">
                 <button type="submit" class="secondary">Refresh Players</button>
             </form>
         </div>
@@ -144,13 +146,17 @@
             <header>🎵 {{.Title}}</header>
             <form action="/ui/parties/{{$.Party.ID}}/guess" method="POST">
                 <input type="hidden" name="user_name" value="{{$.UserName}}">
+                <input type="hidden" name="admin_token" value="{{$.AdminToken}}">
                 <input type="hidden" name="song_id" value="{{.ID}}">
-                <select name="owner_name" onchange="this.form.submit()">
-                    <option value="">Who's song is this?</option>
-                    {{range $.Users}}
-                    <option value="{{.Name}}">{{.Name}}</option>
-                    {{end}}
-                </select>
+                <div class="grid">
+                    <select name="owner_name" required>
+                        <option value="">Who's song is this?</option>
+                        {{range $.Users}}
+                        <option value="{{.Name}}">{{.Name}}</option>
+                        {{end}}
+                    </select>
+                    <button type="submit">Guess</button>
+                </div>
             </form>
         </article>
         {{else}}
@@ -192,13 +198,14 @@
     <div class="grid">
         {{if .IsAdmin}}
         <form action="/ui/parties/{{.Party.ID}}/next" method="POST">
+            <input type="hidden" name="admin_token" value="{{.AdminToken}}">
             <button type="submit">Next Round</button>
         </form>
         {{end}}
 
         <form action="/parties/{{.Party.ID}}/game" method="GET">
             <input type="hidden" name="user" value="{{.UserName}}">
-            {{if .IsAdmin}}<input type="hidden" name="admin" value="true">{{end}}
+            <input type="hidden" name="admin_token" value="{{.AdminToken}}">
             <button type="submit" class="secondary">Refresh Round</button>
         </form>
     </div>

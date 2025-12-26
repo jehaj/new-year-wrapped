@@ -24,11 +24,10 @@ func TestHandler_CreateParty(t *testing.T) {
 	handler := party.NewHandler(service)
 
 	t.Run("Successful creation", func(t *testing.T) {
-		// Given: A valid party ID and name
+		// Given: A valid party name
 		// When: A POST request is made to /parties
-		// Then: The party is created and a 201 status is returned
+		// Then: The party is created and a 201 status is returned with id and admin_token
 		body, _ := json.Marshal(map[string]string{
-			"id":   "party-1",
 			"name": "My Party",
 		})
 		req := httptest.NewRequest("POST", "/parties", bytes.NewBuffer(body))
@@ -39,6 +38,12 @@ func TestHandler_CreateParty(t *testing.T) {
 		if rr.Code != http.StatusCreated {
 			t.Errorf("expected status 201, got %d", rr.Code)
 		}
+
+		var resp map[string]string
+		json.Unmarshal(rr.Body.Bytes(), &resp)
+		if resp["id"] == "" || resp["admin_token"] == "" {
+			t.Errorf("expected id and admin_token in response, got %v", resp)
+		}
 	})
 }
 
@@ -46,7 +51,7 @@ func TestHandler_JoinParty(t *testing.T) {
 	database, _ := sql.Open("sqlite3", ":memory:")
 	defer database.Close()
 	_, _ = database.Exec(db.Schema)
-	_, _ = database.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", "p1", "Test Party")
+	_, _ = database.Exec("INSERT INTO parties (id, name, admin_token) VALUES (?, ?, ?)", "p1", "Test Party", "token")
 
 	service := party.NewService(database, nil)
 	handler := party.NewHandler(service)
@@ -116,7 +121,7 @@ func TestHandler_Competition(t *testing.T) {
 	defer database.Close()
 	_, _ = database.Exec(db.Schema)
 	partyID := "comp-h"
-	_, _ = database.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", partyID, "Comp Handler Party")
+	_, _ = database.Exec("INSERT INTO parties (id, name, admin_token) VALUES (?, ?, ?)", partyID, "Comp Handler Party", "token")
 
 	// Add a user and songs
 	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
@@ -176,7 +181,7 @@ func TestHandler_Guessing(t *testing.T) {
 	defer database.Close()
 	_, _ = database.Exec(db.Schema)
 	partyID := "guess-h"
-	_, _ = database.Exec("INSERT INTO parties (id, name, started, current_round) VALUES (?, ?, TRUE, 1)", partyID, "Guess Handler Party")
+	_, _ = database.Exec("INSERT INTO parties (id, name, admin_token, started, current_round) VALUES (?, ?, ?, TRUE, 1)", partyID, "Guess Handler Party", "token")
 
 	// Alice owns Song 1
 	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
@@ -247,8 +252,7 @@ func TestGetUsersHandler(t *testing.T) {
 	svc := party.NewService(dbConn, nil)
 	h := party.NewHandler(svc)
 
-	partyID := "test-party"
-	svc.CreateParty(context.Background(), partyID, "Test Party")
+	partyID, _, _ := svc.CreateParty(context.Background(), "Test Party")
 	svc.JoinParty(context.Background(), partyID, "Alice", []string{"S1", "S2", "S3"})
 
 	req := httptest.NewRequest("GET", "/parties/"+partyID+"/users", nil)
@@ -280,8 +284,7 @@ func TestGetRoundResultsHandler(t *testing.T) {
 	svc := party.NewService(dbConn, nil)
 	h := party.NewHandler(svc)
 
-	partyID := "test-party"
-	svc.CreateParty(context.Background(), partyID, "Test Party")
+	partyID, _, _ := svc.CreateParty(context.Background(), "Test Party")
 	svc.JoinParty(context.Background(), partyID, "Alice", []string{"S1", "S2", "S3"})
 	svc.StartCompetition(context.Background(), partyID)
 	svc.NextRound(context.Background(), partyID)

@@ -10,6 +10,7 @@ const Schema = `
 CREATE TABLE IF NOT EXISTS parties (
 	id TEXT PRIMARY KEY,
 	name TEXT NOT NULL,
+	admin_token TEXT NOT NULL,
 	started BOOLEAN DEFAULT FALSE,
 	current_round INTEGER DEFAULT 0,
 	songs_per_round INTEGER DEFAULT 5
