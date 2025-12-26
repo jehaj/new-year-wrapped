@@ -4,19 +4,29 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 )
 
 type Service struct {
-	db *sql.DB
+	db     *sql.DB
+	logger *log.Logger
 }
 
-func NewService(db *sql.DB) *Service {
-	return &Service{db: db}
+func NewService(db *sql.DB, logger *log.Logger) *Service {
+	return &Service{db: db, logger: logger}
+}
+
+func (s *Service) log(partyID string, format string, v ...interface{}) {
+	if s.logger != nil {
+		msg := fmt.Sprintf(format, v...)
+		s.logger.Printf("[%s] %s", partyID, msg)
+	}
 }
 
 func (s *Service) JoinParty(ctx context.Context, partyID string, userName string, songs []string) error {
+	s.log(partyID, "User %s joining with %d songs", userName, len(songs))
 	if len(songs) != 3 {
 		return fmt.Errorf("exactly 3 songs are required, got %d", len(songs))
 	}
@@ -60,11 +70,13 @@ func (s *Service) JoinParty(ctx context.Context, partyID string, userName string
 }
 
 func (s *Service) CreateParty(ctx context.Context, id string, name string) error {
+	s.log(id, "Creating party: %s", name)
 	_, err := s.db.ExecContext(ctx, "INSERT INTO parties (id, name) VALUES (?, ?)", id, name)
 	return err
 }
 
 func (s *Service) StartCompetition(ctx context.Context, partyID string) error {
+	s.log(partyID, "Starting competition")
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -166,6 +178,9 @@ type LeaderboardEntry struct {
 }
 
 func (s *Service) SubmitGuess(ctx context.Context, guesserID, songID, guessedUserID int) error {
+	if s.logger != nil {
+		s.logger.Printf("Guess submitted: Guesser %d, Song %d, Guessed Owner %d", guesserID, songID, guessedUserID)
+	}
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO guesses (guesser_id, song_id, guessed_user_id) 
 		VALUES (?, ?, ?)
@@ -211,6 +226,7 @@ func (s *Service) GetLeaderboard(ctx context.Context, partyID string, round int)
 }
 
 func (s *Service) NextRound(ctx context.Context, partyID string) error {
+	s.log(partyID, "Moving to next round")
 	_, err := s.db.ExecContext(ctx, "UPDATE parties SET current_round = current_round + 1 WHERE id = ?", partyID)
 	return err
 }
@@ -250,7 +266,9 @@ func (s *Service) GetUsers(ctx context.Context, partyID string) ([]User, error) 
 // GetRoundResults returns the songs and their owners for a specific round,
 // but only if the round has been revealed (i.e., current_round > round).
 func (s *Service) GetRoundResults(ctx context.Context, partyID string, round int) ([]SongResult, error) {
-	var currentRound, songsPerRound int
+	s.log(partyID, "Fetching results for round %d", round)
+	var currentRound int
+	var songsPerRound int
 	err := s.db.QueryRowContext(ctx, "SELECT current_round, songs_per_round FROM parties WHERE id = ?", partyID).Scan(&currentRound, &songsPerRound)
 	if err != nil {
 		return nil, err

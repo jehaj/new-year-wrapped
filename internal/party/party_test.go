@@ -31,7 +31,7 @@ func TestJoinParty(t *testing.T) {
 		t.Fatalf("failed to insert party: %v", err)
 	}
 
-	service := party.NewService(database)
+	service := party.NewService(database, nil)
 
 	t.Run("Join with valid data", func(t *testing.T) {
 		// Given: A party exists
@@ -106,7 +106,7 @@ func TestStartCompetition(t *testing.T) {
 	partyID := "comp-party"
 	_, _ = database.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", partyID, "Comp Party")
 
-	service := party.NewService(database)
+	service := party.NewService(database, nil)
 
 	// Add some users and songs
 	users := []string{"Alice", "Bob", "Charlie", "Dave"}
@@ -160,7 +160,7 @@ func TestGuessingAndLeaderboard(t *testing.T) {
 	partyID := "guess-party"
 	_, _ = database.Exec("INSERT INTO parties (id, name, started, current_round) VALUES (?, ?, TRUE, 1)", partyID, "Guess Party")
 
-	service := party.NewService(database)
+	service := party.NewService(database, nil)
 
 	// Alice owns Song 1
 	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
@@ -219,7 +219,7 @@ func TestGetUsers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	svc := party.NewService(dbConn)
+	svc := party.NewService(dbConn, nil)
 	ctx := context.Background()
 
 	partyID := "test-party"
@@ -251,7 +251,7 @@ func TestGetRoundResults(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	svc := party.NewService(dbConn)
+	svc := party.NewService(dbConn, nil)
 	ctx := context.Background()
 
 	partyID := "test-party"

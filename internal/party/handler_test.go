@@ -20,7 +20,7 @@ func TestHandler_CreateParty(t *testing.T) {
 	defer database.Close()
 	_, _ = database.Exec(db.Schema)
 
-	service := party.NewService(database)
+	service := party.NewService(database, nil)
 	handler := party.NewHandler(service)
 
 	t.Run("Successful creation", func(t *testing.T) {
@@ -48,7 +48,7 @@ func TestHandler_JoinParty(t *testing.T) {
 	_, _ = database.Exec(db.Schema)
 	_, _ = database.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", "p1", "Test Party")
 
-	service := party.NewService(database)
+	service := party.NewService(database, nil)
 	handler := party.NewHandler(service)
 
 	t.Run("Successful join", func(t *testing.T) {
@@ -125,7 +125,7 @@ func TestHandler_Competition(t *testing.T) {
 		_, _ = database.Exec("INSERT INTO songs (user_id, title) VALUES (?, ?)", userID, fmt.Sprintf("Song %d", i))
 	}
 
-	service := party.NewService(database)
+	service := party.NewService(database, nil)
 	handler := party.NewHandler(service)
 
 	t.Run("Start competition", func(t *testing.T) {
@@ -188,7 +188,7 @@ func TestHandler_Guessing(t *testing.T) {
 	res, _ = database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Bob")
 	bobID, _ := res.LastInsertId()
 
-	service := party.NewService(database)
+	service := party.NewService(database, nil)
 	handler := party.NewHandler(service)
 
 	t.Run("Submit guess", func(t *testing.T) {
@@ -244,7 +244,7 @@ func TestGetUsersHandler(t *testing.T) {
 	defer dbConn.Close()
 	dbConn.Exec(db.Schema)
 
-	svc := party.NewService(dbConn)
+	svc := party.NewService(dbConn, nil)
 	h := party.NewHandler(svc)
 
 	partyID := "test-party"
@@ -277,7 +277,7 @@ func TestGetRoundResultsHandler(t *testing.T) {
 	defer dbConn.Close()
 	dbConn.Exec(db.Schema)
 
-	svc := party.NewService(dbConn)
+	svc := party.NewService(dbConn, nil)
 	h := party.NewHandler(svc)
 
 	partyID := "test-party"

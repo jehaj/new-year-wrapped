@@ -3,19 +3,29 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/jehaj/new-year-wrapped/internal/db"
 	"github.com/jehaj/new-year-wrapped/internal/party"
 )
 
 func main() {
+	// Setup logging to file
+	logFile, err := os.OpenFile("party.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatalf("failed to open log file: %v", err)
+	}
+	defer logFile.Close()
+
+	partyLogger := log.New(logFile, "PARTY: ", log.LstdFlags)
+
 	database, err := db.Init("wrapped.db")
 	if err != nil {
 		log.Fatalf("failed to init db: %v", err)
 	}
 	defer database.Close()
 
-	partyService := party.NewService(database)
+	partyService := party.NewService(database, partyLogger)
 	partyHandler := party.NewHandler(partyService)
 
 	mux := http.NewServeMux()
