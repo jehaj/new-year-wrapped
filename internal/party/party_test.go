@@ -34,6 +34,9 @@ func TestJoinParty(t *testing.T) {
 	service := party.NewService(database)
 
 	t.Run("Join with valid data", func(t *testing.T) {
+		// Given: A party exists
+		// When: A user joins with 3 songs
+		// Then: The user and songs are created in the database
 		userName := "Nikolaj"
 		songs := []string{"Song 1", "Song 2", "Song 3"}
 
@@ -64,6 +67,9 @@ func TestJoinParty(t *testing.T) {
 	})
 
 	t.Run("Join with too many songs should fail", func(t *testing.T) {
+		// Given: A party exists
+		// When: A user tries to join with 4 songs
+		// Then: An error is returned
 		err := service.JoinParty(context.Background(), partyID, "BadUser", []string{"1", "2", "3", "4"})
 		if err == nil {
 			t.Error("expected error for 4 songs, got nil")
@@ -71,6 +77,9 @@ func TestJoinParty(t *testing.T) {
 	})
 
 	t.Run("Create Party", func(t *testing.T) {
+		// Given: A database connection
+		// When: A new party is created
+		// Then: The party exists in the database with the correct name
 		id := "new-party"
 		name := "New Year 2025"
 		err := service.CreateParty(context.Background(), id, name)
@@ -110,6 +119,9 @@ func TestStartCompetition(t *testing.T) {
 	}
 
 	t.Run("Start competition shuffles and assigns rounds", func(t *testing.T) {
+		// Given: A party with multiple users and songs
+		// When: The competition is started
+		// Then: The party is marked as started, current round is 1, and all songs have shuffle indices
 		err := service.StartCompetition(context.Background(), partyID)
 		if err != nil {
 			t.Fatalf("StartCompetition failed: %v", err)
@@ -161,6 +173,9 @@ func TestGuessingAndLeaderboard(t *testing.T) {
 	bobID, _ := res.LastInsertId()
 
 	t.Run("Submit correct guess", func(t *testing.T) {
+		// Given: A started competition with a song owned by Alice and a guesser Bob
+		// When: Bob submits a correct guess for Alice's song and the round is revealed
+		// Then: Bob has 1 point on the leaderboard
 		err := service.SubmitGuess(context.Background(), int(bobID), int(song1ID), int(aliceID))
 		if err != nil {
 			t.Fatalf("SubmitGuess failed: %v", err)
@@ -212,6 +227,9 @@ func TestGetUsers(t *testing.T) {
 	svc.JoinParty(ctx, partyID, "Alice", []string{"S1", "S2", "S3"})
 	svc.JoinParty(ctx, partyID, "Bob", []string{"S4", "S5", "S6"})
 
+	// Given: A party with two users
+	// When: GetUsers is called
+	// Then: Both users are returned
 	users, err := svc.GetUsers(ctx, partyID)
 	if err != nil {
 		t.Fatalf("failed to get users: %v", err)
@@ -251,7 +269,9 @@ func TestGetRoundResults(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Round 1 results (should be 5 songs by default, but we only have 6 total)
+	// Given: A started competition with songs and round 1 revealed
+	// When: GetRoundResults is called for round 1
+	// Then: The songs for round 1 are returned with their owner names
 	results, err := svc.GetRoundResults(ctx, partyID, 1)
 	if err != nil {
 		t.Fatalf("failed to get round results: %v", err)

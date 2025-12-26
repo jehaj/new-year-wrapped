@@ -24,6 +24,9 @@ func TestHandler_CreateParty(t *testing.T) {
 	handler := party.NewHandler(service)
 
 	t.Run("Successful creation", func(t *testing.T) {
+		// Given: A valid party ID and name
+		// When: A POST request is made to /parties
+		// Then: The party is created and a 201 status is returned
 		body, _ := json.Marshal(map[string]string{
 			"id":   "party-1",
 			"name": "My Party",
@@ -49,6 +52,9 @@ func TestHandler_JoinParty(t *testing.T) {
 	handler := party.NewHandler(service)
 
 	t.Run("Successful join", func(t *testing.T) {
+		// Given: An existing party
+		// When: A POST request is made to /parties/{id}/join with valid user and songs
+		// Then: The user joins the party and a 200 status is returned
 		body, _ := json.Marshal(map[string]interface{}{
 			"name":  "Nikolaj",
 			"songs": []string{"Song A", "Song B", "Song C"},
@@ -69,6 +75,9 @@ func TestHandler_JoinParty(t *testing.T) {
 	})
 
 	t.Run("Join non-existent party", func(t *testing.T) {
+		// Given: A non-existent party ID
+		// When: A POST request is made to /parties/{id}/join
+		// Then: A 500 status is returned
 		body, _ := json.Marshal(map[string]interface{}{
 			"name":  "Nikolaj",
 			"songs": []string{"Song A", "Song B", "Song C"},
@@ -84,6 +93,9 @@ func TestHandler_JoinParty(t *testing.T) {
 	})
 
 	t.Run("Join with wrong number of songs", func(t *testing.T) {
+		// Given: An existing party
+		// When: A POST request is made to /parties/{id}/join with only 1 song
+		// Then: A 500 status is returned
 		body, _ := json.Marshal(map[string]interface{}{
 			"name":  "Nikolaj",
 			"songs": []string{"Song A"},
@@ -117,6 +129,9 @@ func TestHandler_Competition(t *testing.T) {
 	handler := party.NewHandler(service)
 
 	t.Run("Start competition", func(t *testing.T) {
+		// Given: A party with users and songs
+		// When: A POST request is made to /parties/{id}/start
+		// Then: The competition starts and a 200 status is returned
 		req := httptest.NewRequest("POST", "/parties/"+partyID+"/start", nil)
 		// Mock PathValue if needed, but our handler has a fallback
 		rr := httptest.NewRecorder()
@@ -128,6 +143,9 @@ func TestHandler_Competition(t *testing.T) {
 	})
 
 	t.Run("Get current round", func(t *testing.T) {
+		// Given: A started competition
+		// When: A GET request is made to /parties/{id}/round
+		// Then: The current round and songs are returned with a 200 status
 		req := httptest.NewRequest("GET", "/parties/"+partyID+"/round", nil)
 		rr := httptest.NewRecorder()
 		handler.GetCurrentRound(rr, req)
@@ -174,6 +192,9 @@ func TestHandler_Guessing(t *testing.T) {
 	handler := party.NewHandler(service)
 
 	t.Run("Submit guess", func(t *testing.T) {
+		// Given: A started competition
+		// When: A POST request is made to /parties/{id}/guess with a valid guess
+		// Then: The guess is recorded and a 200 status is returned
 		body, _ := json.Marshal(map[string]int{
 			"guesser_id":      int(bobID),
 			"song_id":         int(song1ID),
@@ -192,6 +213,9 @@ func TestHandler_Guessing(t *testing.T) {
 	})
 
 	t.Run("Get leaderboard", func(t *testing.T) {
+		// Given: A competition with recorded guesses and a revealed round
+		// When: A GET request is made to /parties/{id}/leaderboard
+		// Then: The leaderboard is returned with a 200 status
 		req := httptest.NewRequest("GET", "/parties/"+partyID+"/leaderboard", nil)
 		rr := httptest.NewRecorder()
 		handler.GetLeaderboard(rr, req)
@@ -232,6 +256,9 @@ func TestGetUsersHandler(t *testing.T) {
 	req.SetPathValue("id", partyID)
 	w := httptest.NewRecorder()
 
+	// Given: A party with a user
+	// When: A GET request is made to /parties/{id}/users
+	// Then: The list of users is returned with a 200 status
 	h.GetUsers(w, req)
 
 	if w.Code != http.StatusOK {
@@ -263,6 +290,9 @@ func TestGetRoundResultsHandler(t *testing.T) {
 	req.SetPathValue("id", partyID)
 	w := httptest.NewRecorder()
 
+	// Given: A started competition with a revealed round
+	// When: A GET request is made to /parties/{id}/results for that round
+	// Then: The round results are returned with a 200 status
 	h.GetRoundResults(w, req)
 
 	if w.Code != http.StatusOK {
