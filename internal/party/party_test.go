@@ -128,25 +128,14 @@ func TestStartCompetition(t *testing.T) {
 			t.Errorf("expected current_round to be 1, got %d", currentRound)
 		}
 
-		// Check if songs have round numbers assigned
+		// Check if songs have shuffle indices assigned
 		var count int
-		err = database.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number > 0", partyID).Scan(&count)
+		err = database.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND shuffle_index >= 0", partyID).Scan(&count)
 		if err != nil {
 			t.Fatalf("failed to query songs: %v", err)
 		}
 		if count != 12 { // 4 users * 3 songs
-			t.Errorf("expected 12 songs with round numbers, got %d", count)
-		}
-
-		// Check round distribution (5 songs per round)
-		// Round 1: 5, Round 2: 5, Round 3: 2
-		var r1, r2, r3 int
-		_ = database.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number = 1", partyID).Scan(&r1)
-		_ = database.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number = 2", partyID).Scan(&r2)
-		_ = database.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number = 3", partyID).Scan(&r3)
-
-		if r1 != 5 || r2 != 5 || r3 != 2 {
-			t.Errorf("unexpected round distribution: r1=%d, r2=%d, r3=%d", r1, r2, r3)
+			t.Errorf("expected 12 songs with shuffle indices, got %d", count)
 		}
 	})
 }
@@ -164,7 +153,7 @@ func TestGuessingAndLeaderboard(t *testing.T) {
 	// Alice owns Song 1
 	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
 	aliceID, _ := res.LastInsertId()
-	res, _ = database.Exec("INSERT INTO songs (user_id, title, round_number) VALUES (?, ?, 1)", aliceID, "Song 1")
+	res, _ = database.Exec("INSERT INTO songs (user_id, title, shuffle_index) VALUES (?, ?, 0)", aliceID, "Song 1")
 	song1ID, _ := res.LastInsertId()
 
 	// Bob is the guesser
@@ -202,4 +191,79 @@ func TestGuessingAndLeaderboard(t *testing.T) {
 			t.Error("Bob not found in leaderboard")
 		}
 	})
+}
+
+func TestGetUsers(t *testing.T) {
+	dbConn, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dbConn.Close()
+
+	if _, err := dbConn.Exec(db.Schema); err != nil {
+		t.Fatal(err)
+	}
+
+	svc := party.NewService(dbConn)
+	ctx := context.Background()
+
+	partyID := "test-party"
+	svc.CreateParty(ctx, partyID, "Test Party")
+	svc.JoinParty(ctx, partyID, "Alice", []string{"S1", "S2", "S3"})
+	svc.JoinParty(ctx, partyID, "Bob", []string{"S4", "S5", "S6"})
+
+	users, err := svc.GetUsers(ctx, partyID)
+	if err != nil {
+		t.Fatalf("failed to get users: %v", err)
+	}
+
+	if len(users) != 2 {
+		t.Errorf("expected 2 users, got %d", len(users))
+	}
+}
+
+func TestGetRoundResults(t *testing.T) {
+	dbConn, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dbConn.Close()
+
+	if _, err := dbConn.Exec(db.Schema); err != nil {
+		t.Fatal(err)
+	}
+
+	svc := party.NewService(dbConn)
+	ctx := context.Background()
+
+	partyID := "test-party"
+	svc.CreateParty(ctx, partyID, "Test Party")
+	svc.JoinParty(ctx, partyID, "Alice", []string{"S1", "S2", "S3"})
+	svc.JoinParty(ctx, partyID, "Bob", []string{"S4", "S5", "S6"})
+
+	// Start competition (shuffles songs)
+	if err := svc.StartCompetition(ctx, partyID); err != nil {
+		t.Fatal(err)
+	}
+
+	// Move to next round to reveal round 1
+	if err := svc.NextRound(ctx, partyID); err != nil {
+		t.Fatal(err)
+	}
+
+	// Round 1 results (should be 5 songs by default, but we only have 6 total)
+	results, err := svc.GetRoundResults(ctx, partyID, 1)
+	if err != nil {
+		t.Fatalf("failed to get round results: %v", err)
+	}
+
+	if len(results) != 5 {
+		t.Errorf("expected 5 songs in round 1, got %d", len(results))
+	}
+
+	for _, res := range results {
+		if res.OwnerName == "" {
+			t.Error("expected owner name to be populated")
+		}
+	}
 }

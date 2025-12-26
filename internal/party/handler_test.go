@@ -2,6 +2,7 @@ package party_test
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -162,7 +163,7 @@ func TestHandler_Guessing(t *testing.T) {
 	// Alice owns Song 1
 	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
 	aliceID, _ := res.LastInsertId()
-	res, _ = database.Exec("INSERT INTO songs (user_id, title, round_number) VALUES (?, ?, 1)", aliceID, "Song 1")
+	res, _ = database.Exec("INSERT INTO songs (user_id, title, shuffle_index) VALUES (?, ?, 0)", aliceID, "Song 1")
 	song1ID, _ := res.LastInsertId()
 
 	// Bob is the guesser
@@ -212,4 +213,65 @@ func TestHandler_Guessing(t *testing.T) {
 			t.Error("Bob with score 1 not found in leaderboard")
 		}
 	})
+}
+
+func TestGetUsersHandler(t *testing.T) {
+	dbConn, _ := sql.Open("sqlite3", ":memory:")
+	defer dbConn.Close()
+	dbConn.Exec(db.Schema)
+
+	svc := party.NewService(dbConn)
+	h := party.NewHandler(svc)
+
+	partyID := "test-party"
+	svc.CreateParty(context.Background(), partyID, "Test Party")
+	svc.JoinParty(context.Background(), partyID, "Alice", []string{"S1", "S2", "S3"})
+
+	req := httptest.NewRequest("GET", "/parties/"+partyID+"/users", nil)
+	// Mock path value for Go 1.22+
+	req.SetPathValue("id", partyID)
+	w := httptest.NewRecorder()
+
+	h.GetUsers(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", w.Code)
+	}
+
+	var users []party.User
+	json.NewDecoder(w.Body).Decode(&users)
+	if len(users) != 1 || users[0].Name != "Alice" {
+		t.Errorf("unexpected users: %+v", users)
+	}
+}
+
+func TestGetRoundResultsHandler(t *testing.T) {
+	dbConn, _ := sql.Open("sqlite3", ":memory:")
+	defer dbConn.Close()
+	dbConn.Exec(db.Schema)
+
+	svc := party.NewService(dbConn)
+	h := party.NewHandler(svc)
+
+	partyID := "test-party"
+	svc.CreateParty(context.Background(), partyID, "Test Party")
+	svc.JoinParty(context.Background(), partyID, "Alice", []string{"S1", "S2", "S3"})
+	svc.StartCompetition(context.Background(), partyID)
+	svc.NextRound(context.Background(), partyID)
+
+	req := httptest.NewRequest("GET", "/parties/"+partyID+"/results?round=1", nil)
+	req.SetPathValue("id", partyID)
+	w := httptest.NewRecorder()
+
+	h.GetRoundResults(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", w.Code)
+	}
+
+	var results []party.SongResult
+	json.NewDecoder(w.Body).Decode(&results)
+	if len(results) != 3 { // Alice has 3 songs, default songs_per_round is 5, so all 3 should be in round 1
+		t.Errorf("expected 3 results, got %d", len(results))
+	}
 }

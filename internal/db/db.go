@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS parties (
 	id TEXT PRIMARY KEY,
 	name TEXT NOT NULL,
 	started BOOLEAN DEFAULT FALSE,
-	current_round INTEGER DEFAULT 0
+	current_round INTEGER DEFAULT 0,
+	songs_per_round INTEGER DEFAULT 5
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -25,7 +26,7 @@ CREATE TABLE IF NOT EXISTS songs (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	user_id INTEGER NOT NULL,
 	title TEXT NOT NULL,
-	round_number INTEGER DEFAULT 0,
+	shuffle_index INTEGER DEFAULT -1,
 	FOREIGN KEY (user_id) REFERENCES users(id)
 );
 

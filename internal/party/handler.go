@@ -163,6 +163,50 @@ func (h *Handler) NextRound(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (h *Handler) GetUsers(w http.ResponseWriter, r *http.Request) {
+	partyID := h.getPartyID(r)
+	if partyID == "" {
+		http.Error(w, "missing party id", http.StatusBadRequest)
+		return
+	}
+
+	users, err := h.service.GetUsers(r.Context(), partyID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(users)
+}
+
+func (h *Handler) GetRoundResults(w http.ResponseWriter, r *http.Request) {
+	partyID := h.getPartyID(r)
+	if partyID == "" {
+		http.Error(w, "missing party id", http.StatusBadRequest)
+		return
+	}
+
+	roundStr := r.URL.Query().Get("round")
+	if roundStr == "" {
+		http.Error(w, "missing round", http.StatusBadRequest)
+		return
+	}
+
+	round, err := strconv.Atoi(roundStr)
+	if err != nil {
+		http.Error(w, "invalid round", http.StatusBadRequest)
+		return
+	}
+
+	results, err := h.service.GetRoundResults(r.Context(), partyID, round)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(results)
+}
+
 func (h *Handler) getPartyID(r *http.Request) string {
 	id := r.PathValue("id")
 	if id != "" {

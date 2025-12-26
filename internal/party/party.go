@@ -101,10 +101,9 @@ func (s *Service) StartCompetition(ctx context.Context, partyID string) error {
 		songIDs[i], songIDs[j] = songIDs[j], songIDs[i]
 	})
 
-	// Assign rounds (5 songs per round)
+	// Assign shuffle index
 	for i, id := range songIDs {
-		roundNumber := (i / 5) + 1
-		_, err = tx.ExecContext(ctx, "UPDATE songs SET round_number = ? WHERE id = ?", roundNumber, id)
+		_, err = tx.ExecContext(ctx, "UPDATE songs SET shuffle_index = ? WHERE id = ?", i, id)
 		if err != nil {
 			return err
 		}
@@ -125,11 +124,21 @@ type Song struct {
 }
 
 func (s *Service) GetRoundSongs(ctx context.Context, partyID string, round int) ([]Song, error) {
+	var songsPerRound int
+	err := s.db.QueryRowContext(ctx, "SELECT songs_per_round FROM parties WHERE id = ?", partyID).Scan(&songsPerRound)
+	if err != nil {
+		return nil, err
+	}
+
+	startIndex := (round - 1) * songsPerRound
+	endIndex := round*songsPerRound - 1
+
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT songs.id, songs.title 
 		FROM songs 
 		JOIN users ON songs.user_id = users.id 
-		WHERE users.party_id = ? AND songs.round_number = ?`, partyID, round)
+		WHERE users.party_id = ? AND songs.shuffle_index BETWEEN ? AND ?
+		ORDER BY songs.shuffle_index ASC`, partyID, startIndex, endIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -172,12 +181,12 @@ func (s *Service) GetLeaderboard(ctx context.Context, partyID string, round int)
 		JOIN parties p ON u.party_id = p.id
 		LEFT JOIN guesses g ON u.id = g.guesser_id
 		LEFT JOIN songs s ON g.song_id = s.id
-		WHERE u.party_id = ? AND s.round_number < p.current_round`
+		WHERE u.party_id = ? AND s.shuffle_index < (p.current_round - 1) * p.songs_per_round`
 
 	args := []interface{}{partyID}
 	if round > 0 {
-		query += " AND s.round_number = ?"
-		args = append(args, round)
+		query += " AND s.shuffle_index BETWEEN (? - 1) * p.songs_per_round AND ? * p.songs_per_round - 1"
+		args = append(args, round, round)
 	}
 
 	query += `
@@ -204,4 +213,74 @@ func (s *Service) GetLeaderboard(ctx context.Context, partyID string, round int)
 func (s *Service) NextRound(ctx context.Context, partyID string) error {
 	_, err := s.db.ExecContext(ctx, "UPDATE parties SET current_round = current_round + 1 WHERE id = ?", partyID)
 	return err
+}
+
+// User represents a participant in a party.
+type User struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+// SongResult represents a song along with its actual owner, used for reveals.
+type SongResult struct {
+	ID        int    `json:"id"`
+	Title     string `json:"title"`
+	OwnerName string `json:"owner_name"`
+}
+
+// GetUsers returns all participants in a party.
+func (s *Service) GetUsers(ctx context.Context, partyID string) ([]User, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT id, name FROM users WHERE party_id = ? ORDER BY name ASC", partyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Name); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, nil
+}
+
+// GetRoundResults returns the songs and their owners for a specific round,
+// but only if the round has been revealed (i.e., current_round > round).
+func (s *Service) GetRoundResults(ctx context.Context, partyID string, round int) ([]SongResult, error) {
+	var currentRound, songsPerRound int
+	err := s.db.QueryRowContext(ctx, "SELECT current_round, songs_per_round FROM parties WHERE id = ?", partyID).Scan(&currentRound, &songsPerRound)
+	if err != nil {
+		return nil, err
+	}
+
+	if currentRound <= round {
+		return nil, fmt.Errorf("round %d has not been revealed yet", round)
+	}
+
+	startIndex := (round - 1) * songsPerRound
+	endIndex := round*songsPerRound - 1
+
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT s.id, s.title, u.name
+		FROM songs s
+		JOIN users u ON s.user_id = u.id
+		WHERE u.party_id = ? AND s.shuffle_index BETWEEN ? AND ?
+		ORDER BY s.shuffle_index ASC`, partyID, startIndex, endIndex)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []SongResult
+	for rows.Next() {
+		var r SongResult
+		if err := rows.Scan(&r.ID, &r.Title, &r.OwnerName); err != nil {
+			return nil, err
+		}
+		results = append(results, r)
+	}
+	return results, nil
 }
