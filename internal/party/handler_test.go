@@ -9,16 +9,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/jehaj/new-year-wrapped/internal/db"
 	"github.com/jehaj/new-year-wrapped/internal/party"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestHandler_CreateParty(t *testing.T) {
-	db, _ := sql.Open("sqlite3", ":memory:")
-	defer db.Close()
-	_, _ = db.Exec("CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT)")
+	database, _ := sql.Open("sqlite3", ":memory:")
+	defer database.Close()
+	_, _ = database.Exec(db.Schema)
 
-	service := party.NewService(db)
+	service := party.NewService(database)
 	handler := party.NewHandler(service)
 
 	t.Run("Successful creation", func(t *testing.T) {
@@ -38,16 +39,12 @@ func TestHandler_CreateParty(t *testing.T) {
 }
 
 func TestHandler_JoinParty(t *testing.T) {
-	db, _ := sql.Open("sqlite3", ":memory:")
-	defer db.Close()
-	_, _ = db.Exec(`
-		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT);
-		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
-		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT);
-	`)
-	_, _ = db.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", "p1", "Test Party")
+	database, _ := sql.Open("sqlite3", ":memory:")
+	defer database.Close()
+	_, _ = database.Exec(db.Schema)
+	_, _ = database.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", "p1", "Test Party")
 
-	service := party.NewService(db)
+	service := party.NewService(database)
 	handler := party.NewHandler(service)
 
 	t.Run("Successful join", func(t *testing.T) {
@@ -102,24 +99,20 @@ func TestHandler_JoinParty(t *testing.T) {
 }
 
 func TestHandler_Competition(t *testing.T) {
-	db, _ := sql.Open("sqlite3", ":memory:")
-	defer db.Close()
-	_, _ = db.Exec(`
-		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT, started BOOLEAN DEFAULT FALSE, current_round INTEGER DEFAULT 0);
-		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
-		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, round_number INTEGER DEFAULT 0);
-	`)
+	database, _ := sql.Open("sqlite3", ":memory:")
+	defer database.Close()
+	_, _ = database.Exec(db.Schema)
 	partyID := "comp-h"
-	_, _ = db.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", partyID, "Comp Handler Party")
+	_, _ = database.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", partyID, "Comp Handler Party")
 
 	// Add a user and songs
-	res, _ := db.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
+	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
 	userID, _ := res.LastInsertId()
 	for i := 1; i <= 3; i++ {
-		_, _ = db.Exec("INSERT INTO songs (user_id, title) VALUES (?, ?)", userID, fmt.Sprintf("Song %d", i))
+		_, _ = database.Exec("INSERT INTO songs (user_id, title) VALUES (?, ?)", userID, fmt.Sprintf("Song %d", i))
 	}
 
-	service := party.NewService(db)
+	service := party.NewService(database)
 	handler := party.NewHandler(service)
 
 	t.Run("Start competition", func(t *testing.T) {
@@ -160,28 +153,23 @@ func TestHandler_Competition(t *testing.T) {
 }
 
 func TestHandler_Guessing(t *testing.T) {
-	db, _ := sql.Open("sqlite3", ":memory:")
-	defer db.Close()
-	_, _ = db.Exec(`
-		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT, started BOOLEAN DEFAULT FALSE, current_round INTEGER DEFAULT 0);
-		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
-		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, round_number INTEGER DEFAULT 0);
-		CREATE TABLE guesses (id INTEGER PRIMARY KEY AUTOINCREMENT, guesser_id INTEGER NOT NULL, song_id INTEGER NOT NULL, guessed_user_id INTEGER NOT NULL, UNIQUE(guesser_id, song_id));
-	`)
+	database, _ := sql.Open("sqlite3", ":memory:")
+	defer database.Close()
+	_, _ = database.Exec(db.Schema)
 	partyID := "guess-h"
-	_, _ = db.Exec("INSERT INTO parties (id, name, started, current_round) VALUES (?, ?, TRUE, 1)", partyID, "Guess Handler Party")
+	_, _ = database.Exec("INSERT INTO parties (id, name, started, current_round) VALUES (?, ?, TRUE, 1)", partyID, "Guess Handler Party")
 
 	// Alice owns Song 1
-	res, _ := db.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
+	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
 	aliceID, _ := res.LastInsertId()
-	res, _ = db.Exec("INSERT INTO songs (user_id, title, round_number) VALUES (?, ?, 1)", aliceID, "Song 1")
+	res, _ = database.Exec("INSERT INTO songs (user_id, title, round_number) VALUES (?, ?, 1)", aliceID, "Song 1")
 	song1ID, _ := res.LastInsertId()
 
 	// Bob is the guesser
-	res, _ = db.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Bob")
+	res, _ = database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Bob")
 	bobID, _ := res.LastInsertId()
 
-	service := party.NewService(db)
+	service := party.NewService(database)
 	handler := party.NewHandler(service)
 
 	t.Run("Submit guess", func(t *testing.T) {

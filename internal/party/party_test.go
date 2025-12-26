@@ -6,36 +6,32 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/jehaj/new-year-wrapped/internal/db"
 	"github.com/jehaj/new-year-wrapped/internal/party"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestJoinParty(t *testing.T) {
-	db, err := sql.Open("sqlite3", ":memory:")
+	database, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to open database: %v", err)
 	}
-	defer db.Close()
+	defer database.Close()
 
 	// Setup schema
-	_, err = db.Exec(`
-		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT, started BOOLEAN DEFAULT FALSE, current_round INTEGER DEFAULT 0);
-		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
-		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, round_number INTEGER DEFAULT 0);
-		CREATE TABLE guesses (id INTEGER PRIMARY KEY AUTOINCREMENT, guesser_id INTEGER NOT NULL, song_id INTEGER NOT NULL, guessed_user_id INTEGER NOT NULL, UNIQUE(guesser_id, song_id));
-	`)
+	_, err = database.Exec(db.Schema)
 	if err != nil {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
 	// Create a mocked party
 	partyID := "test-party"
-	_, err = db.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", partyID, "Test Party")
+	_, err = database.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", partyID, "Test Party")
 	if err != nil {
 		t.Fatalf("failed to insert party: %v", err)
 	}
 
-	service := party.NewService(db)
+	service := party.NewService(database)
 
 	t.Run("Join with valid data", func(t *testing.T) {
 		userName := "Nikolaj"
@@ -48,7 +44,7 @@ func TestJoinParty(t *testing.T) {
 
 		// Verify user was created
 		var count int
-		err = db.QueryRow("SELECT COUNT(*) FROM users WHERE party_id = ? AND name = ?", partyID, userName).Scan(&count)
+		err = database.QueryRow("SELECT COUNT(*) FROM users WHERE party_id = ? AND name = ?", partyID, userName).Scan(&count)
 		if err != nil {
 			t.Fatalf("failed to query users: %v", err)
 		}
@@ -58,7 +54,7 @@ func TestJoinParty(t *testing.T) {
 
 		// Verify songs were created
 		var songCount int
-		err = db.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.name = ?", userName).Scan(&songCount)
+		err = database.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.name = ?", userName).Scan(&songCount)
 		if err != nil {
 			t.Fatalf("failed to query songs: %v", err)
 		}
@@ -83,7 +79,7 @@ func TestJoinParty(t *testing.T) {
 		}
 
 		var dbName string
-		err = db.QueryRow("SELECT name FROM parties WHERE id = ?", id).Scan(&dbName)
+		err = database.QueryRow("SELECT name FROM parties WHERE id = ?", id).Scan(&dbName)
 		if err != nil {
 			t.Fatalf("failed to query party: %v", err)
 		}
@@ -94,27 +90,22 @@ func TestJoinParty(t *testing.T) {
 }
 
 func TestStartCompetition(t *testing.T) {
-	db, _ := sql.Open("sqlite3", ":memory:")
-	defer db.Close()
-	_, _ = db.Exec(`
-		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT, started BOOLEAN DEFAULT FALSE, current_round INTEGER DEFAULT 0);
-		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
-		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, round_number INTEGER DEFAULT 0);
-		CREATE TABLE guesses (id INTEGER PRIMARY KEY AUTOINCREMENT, guesser_id INTEGER NOT NULL, song_id INTEGER NOT NULL, guessed_user_id INTEGER NOT NULL, UNIQUE(guesser_id, song_id));
-	`)
+	database, _ := sql.Open("sqlite3", ":memory:")
+	defer database.Close()
+	_, _ = database.Exec(db.Schema)
 
 	partyID := "comp-party"
-	_, _ = db.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", partyID, "Comp Party")
+	_, _ = database.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", partyID, "Comp Party")
 
-	service := party.NewService(db)
+	service := party.NewService(database)
 
 	// Add some users and songs
 	users := []string{"Alice", "Bob", "Charlie", "Dave"}
 	for _, name := range users {
-		res, _ := db.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, name)
+		res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, name)
 		userID, _ := res.LastInsertId()
 		for j := 1; j <= 3; j++ {
-			_, _ = db.Exec("INSERT INTO songs (user_id, title) VALUES (?, ?)", userID, fmt.Sprintf("%s Song %d", name, j))
+			_, _ = database.Exec("INSERT INTO songs (user_id, title) VALUES (?, ?)", userID, fmt.Sprintf("%s Song %d", name, j))
 		}
 	}
 
@@ -126,7 +117,7 @@ func TestStartCompetition(t *testing.T) {
 
 		var started bool
 		var currentRound int
-		err = db.QueryRow("SELECT started, current_round FROM parties WHERE id = ?", partyID).Scan(&started, &currentRound)
+		err = database.QueryRow("SELECT started, current_round FROM parties WHERE id = ?", partyID).Scan(&started, &currentRound)
 		if err != nil {
 			t.Fatalf("failed to query party: %v", err)
 		}
@@ -139,7 +130,7 @@ func TestStartCompetition(t *testing.T) {
 
 		// Check if songs have round numbers assigned
 		var count int
-		err = db.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number > 0", partyID).Scan(&count)
+		err = database.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number > 0", partyID).Scan(&count)
 		if err != nil {
 			t.Fatalf("failed to query songs: %v", err)
 		}
@@ -150,9 +141,9 @@ func TestStartCompetition(t *testing.T) {
 		// Check round distribution (5 songs per round)
 		// Round 1: 5, Round 2: 5, Round 3: 2
 		var r1, r2, r3 int
-		_ = db.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number = 1", partyID).Scan(&r1)
-		_ = db.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number = 2", partyID).Scan(&r2)
-		_ = db.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number = 3", partyID).Scan(&r3)
+		_ = database.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number = 1", partyID).Scan(&r1)
+		_ = database.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number = 2", partyID).Scan(&r2)
+		_ = database.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number = 3", partyID).Scan(&r3)
 
 		if r1 != 5 || r2 != 5 || r3 != 2 {
 			t.Errorf("unexpected round distribution: r1=%d, r2=%d, r3=%d", r1, r2, r3)
@@ -161,28 +152,23 @@ func TestStartCompetition(t *testing.T) {
 }
 
 func TestGuessingAndLeaderboard(t *testing.T) {
-	db, _ := sql.Open("sqlite3", ":memory:")
-	defer db.Close()
-	_, _ = db.Exec(`
-		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT, started BOOLEAN DEFAULT FALSE, current_round INTEGER DEFAULT 0);
-		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
-		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, round_number INTEGER DEFAULT 0);
-		CREATE TABLE guesses (id INTEGER PRIMARY KEY AUTOINCREMENT, guesser_id INTEGER NOT NULL, song_id INTEGER NOT NULL, guessed_user_id INTEGER NOT NULL, UNIQUE(guesser_id, song_id));
-	`)
+	database, _ := sql.Open("sqlite3", ":memory:")
+	defer database.Close()
+	_, _ = database.Exec(db.Schema)
 
 	partyID := "guess-party"
-	_, _ = db.Exec("INSERT INTO parties (id, name, started, current_round) VALUES (?, ?, TRUE, 1)", partyID, "Guess Party")
+	_, _ = database.Exec("INSERT INTO parties (id, name, started, current_round) VALUES (?, ?, TRUE, 1)", partyID, "Guess Party")
 
-	service := party.NewService(db)
+	service := party.NewService(database)
 
 	// Alice owns Song 1
-	res, _ := db.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
+	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
 	aliceID, _ := res.LastInsertId()
-	res, _ = db.Exec("INSERT INTO songs (user_id, title, round_number) VALUES (?, ?, 1)", aliceID, "Song 1")
+	res, _ = database.Exec("INSERT INTO songs (user_id, title, round_number) VALUES (?, ?, 1)", aliceID, "Song 1")
 	song1ID, _ := res.LastInsertId()
 
 	// Bob is the guesser
-	res, _ = db.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Bob")
+	res, _ = database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Bob")
 	bobID, _ := res.LastInsertId()
 
 	t.Run("Submit correct guess", func(t *testing.T) {
