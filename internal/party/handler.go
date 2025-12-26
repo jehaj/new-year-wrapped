@@ -50,18 +50,23 @@ func (h *Handler) PartyPage(w http.ResponseWriter, r *http.Request) {
 	adminToken := r.URL.Query().Get("admin_token")
 
 	started, _, err := h.service.GetPartyState(r.Context(), partyID)
-	if err == nil && started {
+	if err != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	if started {
 		http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?user=%s&admin_token=%s", partyID, userName, adminToken), http.StatusSeeOther)
 		return
 	}
 
+	partyName, _ := h.service.GetPartyName(r.Context(), partyID)
 	users, _ := h.service.GetUsers(r.Context(), partyID)
 	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
 
 	data := map[string]interface{}{
 		"Party": map[string]string{
 			"ID":   partyID,
-			"Name": "Party " + partyID,
+			"Name": partyName,
 		},
 		"Users":      users,
 		"UserJoined": userName != "",
@@ -83,11 +88,16 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 	adminToken := r.URL.Query().Get("admin_token")
 
 	started, currentRound, err := h.service.GetPartyState(r.Context(), partyID)
-	if err != nil || !started {
+	if err != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	if !started {
 		http.Redirect(w, r, "/parties/"+partyID, http.StatusSeeOther)
 		return
 	}
 
+	partyName, _ := h.service.GetPartyName(r.Context(), partyID)
 	songs, _ := h.service.GetRoundSongs(r.Context(), partyID, currentRound)
 	users, _ := h.service.GetUsers(r.Context(), partyID)
 	leaderboard, _ := h.service.GetLeaderboard(r.Context(), partyID, 0)
@@ -101,7 +111,7 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
 		"Party": map[string]string{
 			"ID":   partyID,
-			"Name": "Party " + partyID,
+			"Name": partyName,
 		},
 		"CurrentRound":    currentRound,
 		"Songs":           songs,
@@ -132,6 +142,15 @@ func (h *Handler) UICreateParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/parties/%s?admin_token=%s", id, adminToken), http.StatusSeeOther)
+}
+
+func (h *Handler) UIPartyRedirect(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/parties/"+id, http.StatusSeeOther)
 }
 
 func (h *Handler) UIJoinParty(w http.ResponseWriter, r *http.Request) {

@@ -43,6 +43,7 @@ func main() {
 
 	// UI Routes
 	mux.HandleFunc("GET /", partyHandler.IndexPage)
+	mux.HandleFunc("GET /parties", partyHandler.UIPartyRedirect)
 	mux.HandleFunc("GET /parties/{id}", partyHandler.PartyPage)
 	mux.HandleFunc("GET /parties/{id}/game", partyHandler.GamePage)
 

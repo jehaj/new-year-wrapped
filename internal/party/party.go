@@ -185,6 +185,12 @@ func (s *Service) GetRoundSongs(ctx context.Context, partyID string, round int) 
 	return songs, nil
 }
 
+func (s *Service) GetPartyName(ctx context.Context, partyID string) (string, error) {
+	var name string
+	err := s.db.QueryRowContext(ctx, "SELECT name FROM parties WHERE id = ?", partyID).Scan(&name)
+	return name, err
+}
+
 func (s *Service) GetPartyState(ctx context.Context, partyID string) (started bool, currentRound int, err error) {
 	err = s.db.QueryRowContext(ctx, "SELECT started, current_round FROM parties WHERE id = ?", partyID).Scan(&started, &currentRound)
 	return
