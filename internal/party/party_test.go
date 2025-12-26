@@ -3,6 +3,7 @@ package party_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 
 	"github.com/jehaj/new-year-wrapped/internal/party"
@@ -18,9 +19,9 @@ func TestJoinParty(t *testing.T) {
 
 	// Setup schema
 	_, err = db.Exec(`
-		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT);
+		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT, started BOOLEAN DEFAULT FALSE, current_round INTEGER DEFAULT 0);
 		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
-		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT);
+		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, round_number INTEGER DEFAULT 0);
 	`)
 	if err != nil {
 		t.Fatalf("failed to create schema: %v", err)
@@ -87,6 +88,72 @@ func TestJoinParty(t *testing.T) {
 		}
 		if dbName != name {
 			t.Errorf("expected name %s, got %s", name, dbName)
+		}
+	})
+}
+
+func TestStartCompetition(t *testing.T) {
+	db, _ := sql.Open("sqlite3", ":memory:")
+	defer db.Close()
+	_, _ = db.Exec(`
+		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT, started BOOLEAN DEFAULT FALSE, current_round INTEGER DEFAULT 0);
+		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
+		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, round_number INTEGER DEFAULT 0);
+	`)
+
+	partyID := "comp-party"
+	_, _ = db.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", partyID, "Comp Party")
+
+	service := party.NewService(db)
+
+	// Add some users and songs
+	users := []string{"Alice", "Bob", "Charlie", "Dave"}
+	for _, name := range users {
+		res, _ := db.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, name)
+		userID, _ := res.LastInsertId()
+		for j := 1; j <= 3; j++ {
+			_, _ = db.Exec("INSERT INTO songs (user_id, title) VALUES (?, ?)", userID, fmt.Sprintf("%s Song %d", name, j))
+		}
+	}
+
+	t.Run("Start competition shuffles and assigns rounds", func(t *testing.T) {
+		err := service.StartCompetition(context.Background(), partyID)
+		if err != nil {
+			t.Fatalf("StartCompetition failed: %v", err)
+		}
+
+		var started bool
+		var currentRound int
+		err = db.QueryRow("SELECT started, current_round FROM parties WHERE id = ?", partyID).Scan(&started, &currentRound)
+		if err != nil {
+			t.Fatalf("failed to query party: %v", err)
+		}
+		if !started {
+			t.Error("expected started to be true")
+		}
+		if currentRound != 1 {
+			t.Errorf("expected current_round to be 1, got %d", currentRound)
+		}
+
+		// Check if songs have round numbers assigned
+		var count int
+		err = db.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number > 0", partyID).Scan(&count)
+		if err != nil {
+			t.Fatalf("failed to query songs: %v", err)
+		}
+		if count != 12 { // 4 users * 3 songs
+			t.Errorf("expected 12 songs with round numbers, got %d", count)
+		}
+
+		// Check round distribution (5 songs per round)
+		// Round 1: 5, Round 2: 5, Round 3: 2
+		var r1, r2, r3 int
+		_ = db.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number = 1", partyID).Scan(&r1)
+		_ = db.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number = 2", partyID).Scan(&r2)
+		_ = db.QueryRow("SELECT COUNT(*) FROM songs JOIN users ON songs.user_id = users.id WHERE users.party_id = ? AND round_number = 3", partyID).Scan(&r3)
+
+		if r1 != 5 || r2 != 5 || r3 != 2 {
+			t.Errorf("unexpected round distribution: r1=%d, r2=%d, r3=%d", r1, r2, r3)
 		}
 	})
 }

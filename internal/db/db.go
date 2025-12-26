@@ -15,7 +15,9 @@ func Init(path string) (*sql.DB, error) {
 	schema := `
 	CREATE TABLE IF NOT EXISTS parties (
 		id TEXT PRIMARY KEY,
-		name TEXT NOT NULL
+		name TEXT NOT NULL,
+		started BOOLEAN DEFAULT FALSE,
+		current_round INTEGER DEFAULT 0
 	);
 
 	CREATE TABLE IF NOT EXISTS users (
@@ -29,6 +31,7 @@ func Init(path string) (*sql.DB, error) {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id INTEGER NOT NULL,
 		title TEXT NOT NULL,
+		round_number INTEGER DEFAULT 0,
 		FOREIGN KEY (user_id) REFERENCES users(id)
 	);
 	`

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -96,6 +97,64 @@ func TestHandler_JoinParty(t *testing.T) {
 
 		if rr.Code != http.StatusInternalServerError {
 			t.Errorf("expected status 500, got %d", rr.Code)
+		}
+	})
+}
+
+func TestHandler_Competition(t *testing.T) {
+	db, _ := sql.Open("sqlite3", ":memory:")
+	defer db.Close()
+	_, _ = db.Exec(`
+		CREATE TABLE parties (id TEXT PRIMARY KEY, name TEXT, started BOOLEAN DEFAULT FALSE, current_round INTEGER DEFAULT 0);
+		CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, party_id TEXT, name TEXT);
+		CREATE TABLE songs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, round_number INTEGER DEFAULT 0);
+	`)
+	partyID := "comp-h"
+	_, _ = db.Exec("INSERT INTO parties (id, name) VALUES (?, ?)", partyID, "Comp Handler Party")
+
+	// Add a user and songs
+	res, _ := db.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
+	userID, _ := res.LastInsertId()
+	for i := 1; i <= 3; i++ {
+		_, _ = db.Exec("INSERT INTO songs (user_id, title) VALUES (?, ?)", userID, fmt.Sprintf("Song %d", i))
+	}
+
+	service := party.NewService(db)
+	handler := party.NewHandler(service)
+
+	t.Run("Start competition", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/parties/"+partyID+"/start", nil)
+		// Mock PathValue if needed, but our handler has a fallback
+		rr := httptest.NewRecorder()
+		handler.StartCompetition(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", rr.Code)
+		}
+	})
+
+	t.Run("Get current round", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/parties/"+partyID+"/round", nil)
+		rr := httptest.NewRecorder()
+		handler.GetCurrentRound(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", rr.Code)
+		}
+
+		var resp struct {
+			Round int          `json:"round"`
+			Songs []party.Song `json:"songs"`
+		}
+		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if resp.Round != 1 {
+			t.Errorf("expected round 1, got %d", resp.Round)
+		}
+		if len(resp.Songs) != 3 {
+			t.Errorf("expected 3 songs, got %d", len(resp.Songs))
 		}
 	})
 }

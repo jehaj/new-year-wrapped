@@ -23,6 +23,8 @@ func main() {
 	// API Routes
 	mux.HandleFunc("POST /parties", partyHandler.CreateParty)
 	mux.HandleFunc("POST /parties/{id}/join", partyHandler.JoinParty)
+	mux.HandleFunc("POST /parties/{id}/start", partyHandler.StartCompetition)
+	mux.HandleFunc("GET /parties/{id}/round", partyHandler.GetCurrentRound)
 
 	log.Println("Server starting on :8080")
 	if err := http.ListenAndServe(":8080", mux); err != nil {
