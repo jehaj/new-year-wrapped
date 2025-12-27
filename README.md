@@ -4,6 +4,8 @@ A Spotify Wrapped-themed competition website for friends. Join a party, submit y
 
 ## Features
 
+See the [User Stories](USER_STORIES.md) for a detailed list of features. Key highlights include:
+
 - **Party Management**: Create private parties with unique 6-character IDs.
 - **Admin Security**: Secure admin actions (Start, Next Round) using a 12-character `admin_token`.
 - **Song Submission**: Users join with their Name and Top 3 Songs.
