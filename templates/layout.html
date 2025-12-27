@@ -58,7 +58,7 @@
     <main class="container">
         {{if not .Party}}
         {{template "index" .}}
-        {{else if .Songs}}
+        {{else if .Started}}
         {{template "game" .}}
         {{else}}
         {{template "party" .}}
@@ -120,6 +120,7 @@
             {{if .IsAdmin}}
             <form action="/ui/parties/{{.Party.ID}}/start" method="POST">
                 <input type="hidden" name="admin_token" value="{{.AdminToken}}">
+                <input type="hidden" name="user_name" value="{{.UserName}}">
                 <button type="submit">Start Competition</button>
             </form>
             {{else}}
@@ -148,14 +149,17 @@
                 <input type="hidden" name="user_name" value="{{$.UserName}}">
                 <input type="hidden" name="admin_token" value="{{$.AdminToken}}">
                 <input type="hidden" name="song_id" value="{{.ID}}">
+                {{$guessedOwner := index $.UserGuesses .ID}}
                 <div class="grid">
-                    <select name="owner_name" required>
+                    <select name="owner_name" required {{if $guessedOwner}}disabled{{end}}>
                         <option value="">Who's song is this?</option>
                         {{range $.Users}}
-                        <option value="{{.Name}}">{{.Name}}</option>
+                        <option value="{{.Name}}" {{if eq .Name $guessedOwner}}selected{{end}}>{{.Name}}</option>
                         {{end}}
                     </select>
-                    <button type="submit">Guess</button>
+                    <button type="submit" {{if $guessedOwner}}disabled{{end}}>
+                        {{if $guessedOwner}}You have already guessed{{else}}Guess{{end}}
+                    </button>
                 </div>
             </form>
         </article>
@@ -176,29 +180,53 @@
     {{end}}
 
     <div id="leaderboard-section" style="margin-top: 2rem;">
-        <h3>Leaderboard</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Player</th>
-                    <th>Score</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{range .Leaderboard}}
-                <tr>
-                    <td>{{.UserName}}</td>
-                    <td>{{.Score}}</td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
+        <div class="grid">
+            <div>
+                <h3>Round Results</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Leaderboard}}
+                        <tr>
+                            <td>{{.UserName}}</td>
+                            <td>{{.Score}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <h3>Global Leaderboard</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .GlobalLeaderboard}}
+                        <tr>
+                            <td>{{.UserName}}</td>
+                            <td>{{.Score}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <div class="grid">
         {{if .IsAdmin}}
         <form action="/ui/parties/{{.Party.ID}}/next" method="POST">
             <input type="hidden" name="admin_token" value="{{.AdminToken}}">
+            <input type="hidden" name="user_name" value="{{.UserName}}">
             <button type="submit">Next Round</button>
         </form>
         {{end}}

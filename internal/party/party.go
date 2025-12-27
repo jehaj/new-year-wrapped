@@ -191,6 +191,30 @@ func (s *Service) GetPartyName(ctx context.Context, partyID string) (string, err
 	return name, err
 }
 
+func (s *Service) GetUserGuesses(ctx context.Context, partyID string, userName string) (map[int]string, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT g.song_id, u_guessed.name
+		FROM guesses g
+		JOIN users u_guesser ON g.guesser_id = u_guesser.id
+		JOIN users u_guessed ON g.guessed_user_id = u_guessed.id
+		WHERE u_guesser.party_id = ? AND u_guesser.name = ?`, partyID, userName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	guesses := make(map[int]string)
+	for rows.Next() {
+		var songID int
+		var guessedName string
+		if err := rows.Scan(&songID, &guessedName); err != nil {
+			return nil, err
+		}
+		guesses[songID] = guessedName
+	}
+	return guesses, nil
+}
+
 func (s *Service) GetPartyState(ctx context.Context, partyID string) (started bool, currentRound int, err error) {
 	err = s.db.QueryRowContext(ctx, "SELECT started, current_round FROM parties WHERE id = ?", partyID).Scan(&started, &currentRound)
 	return
@@ -214,23 +238,32 @@ func (s *Service) SubmitGuess(ctx context.Context, guesserID, songID, guessedUse
 }
 
 func (s *Service) GetLeaderboard(ctx context.Context, partyID string, round int) ([]LeaderboardEntry, error) {
-	query := `
-		SELECT u.name, COUNT(CASE WHEN g.guessed_user_id = s.user_id THEN 1 END) as score
-		FROM users u
-		JOIN parties p ON u.party_id = p.id
-		LEFT JOIN guesses g ON u.id = g.guesser_id
-		LEFT JOIN songs s ON g.song_id = s.id
-		WHERE u.party_id = ? AND s.shuffle_index < (p.current_round - 1) * p.songs_per_round`
+	var query string
+	var args []interface{}
 
-	args := []interface{}{partyID}
 	if round > 0 {
-		query += " AND s.shuffle_index BETWEEN (? - 1) * p.songs_per_round AND ? * p.songs_per_round - 1"
-		args = append(args, round, round)
+		query = `
+			SELECT u.name, COUNT(CASE WHEN g.guessed_user_id = s.user_id AND s.shuffle_index BETWEEN (? - 1) * p.songs_per_round AND ? * p.songs_per_round - 1 THEN 1 END) as score
+			FROM users u
+			JOIN parties p ON u.party_id = p.id
+			LEFT JOIN guesses g ON u.id = g.guesser_id
+			LEFT JOIN songs s ON g.song_id = s.id
+			WHERE u.party_id = ?
+			GROUP BY u.id
+			ORDER BY score DESC`
+		args = []interface{}{round, round, partyID}
+	} else {
+		query = `
+			SELECT u.name, COUNT(CASE WHEN g.guessed_user_id = s.user_id AND s.shuffle_index < (p.current_round - 1) * p.songs_per_round THEN 1 END) as score
+			FROM users u
+			JOIN parties p ON u.party_id = p.id
+			LEFT JOIN guesses g ON u.id = g.guesser_id
+			LEFT JOIN songs s ON g.song_id = s.id
+			WHERE u.party_id = ?
+			GROUP BY u.id
+			ORDER BY score DESC`
+		args = []interface{}{partyID}
 	}
-
-	query += `
-		GROUP BY u.id
-		ORDER BY score DESC`
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {

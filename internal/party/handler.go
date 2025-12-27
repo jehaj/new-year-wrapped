@@ -100,8 +100,10 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 	partyName, _ := h.service.GetPartyName(r.Context(), partyID)
 	songs, _ := h.service.GetRoundSongs(r.Context(), partyID, currentRound)
 	users, _ := h.service.GetUsers(r.Context(), partyID)
-	leaderboard, _ := h.service.GetLeaderboard(r.Context(), partyID, 0)
+	leaderboard, _ := h.service.GetLeaderboard(r.Context(), partyID, currentRound-1)
+	globalLeaderboard, _ := h.service.GetLeaderboard(r.Context(), partyID, 0)
 	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
+	userGuesses, _ := h.service.GetUserGuesses(r.Context(), partyID, userName)
 
 	var previousResults []SongResult
 	if currentRound > 1 {
@@ -113,14 +115,17 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 			"ID":   partyID,
 			"Name": partyName,
 		},
-		"CurrentRound":    currentRound,
-		"Songs":           songs,
-		"Users":           users,
-		"UserName":        userName,
-		"AdminToken":      adminToken,
-		"Leaderboard":     leaderboard,
-		"PreviousResults": previousResults,
-		"IsAdmin":         isAdmin,
+		"Started":           true,
+		"CurrentRound":      currentRound,
+		"Songs":             songs,
+		"Users":             users,
+		"UserName":          userName,
+		"AdminToken":        adminToken,
+		"Leaderboard":       leaderboard,
+		"GlobalLeaderboard": globalLeaderboard,
+		"PreviousResults":   previousResults,
+		"IsAdmin":           isAdmin,
+		"UserGuesses":       userGuesses,
 	}
 
 	h.templates.ExecuteTemplate(w, "layout", data)
@@ -174,6 +179,7 @@ func (h *Handler) UIJoinParty(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UIStartCompetition(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	adminToken := r.FormValue("admin_token")
+	userName := r.FormValue("user_name")
 
 	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
 	if !isAdmin {
@@ -185,12 +191,13 @@ func (h *Handler) UIStartCompetition(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?admin_token=%s", partyID, adminToken), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?user=%s&admin_token=%s", partyID, userName, adminToken), http.StatusSeeOther)
 }
 
 func (h *Handler) UINextRound(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	adminToken := r.FormValue("admin_token")
+	userName := r.FormValue("user_name")
 
 	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
 	if !isAdmin {
@@ -202,7 +209,7 @@ func (h *Handler) UINextRound(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?admin_token=%s", partyID, adminToken), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?user=%s&admin_token=%s", partyID, userName, adminToken), http.StatusSeeOther)
 }
 
 func (h *Handler) UIGuess(w http.ResponseWriter, r *http.Request) {
