@@ -1,27 +1,28 @@
 # User Stories
 
-As a user I want
+## Party Management
+- [x] As a user, I want to create a new Party so that I can host a game for my friends.
+- [x] As an admin, I want a unique Party ID and a secure token so that I can manage my party privately.
+- [x] As a user, I want to join a party with my name and 3 favorite songs so that I can participate.
+- [x] As a user, I want to see a waiting screen with the list of joined players so I know when we are ready.
+- [x] As an admin, I want to start the competition once everyone has joined.
 
-- [ ] for my guesses to be remembered if I refresh the page so that I don't lose my progress.
-- [x] to create a new Party so that I can invite my friends to join and participate in the guessing game.
-- [x] to receive a unique Party ID and an admin token when I create a Party so that I can manage the game.
-- [x] to join an existing Party by providing my name and top 3 songs so that I can participate in the competition.
-- [x] to see a waiting screen after joining a Party so that I know the game will start soon.
-- [x] to have the Admin start the competition so that the game can begin.
-- [x] to have my songs shuffled with those of other participants so that the guessing is fair and random.
-- [x] to guess which song belongs to which participant during each round so that I can earn points.
-- [x] to have the UI disable my guess options after I make a selection so that I cannot change my answer.
-- [ ] to see a leaderboard after each round showing round-specific results and overall standings so that I can track my performance.
-- [ ] to have Admin actions (like starting the game and moving to the next round) secured with an admin token so that only authorized users can perform these actions.
-- [ ] to have the application log important events to a log file so that I can troubleshoot issues if they arise.
-- [ ] to have tests for database operations and route handlers so that I can ensure the application works correctly.
-- [ ] to run the application locally using Go so that I can test and play the game on my machine.
-- [ ] to have the frontend styled with Pico CSS served locally so that I can have a consistent and fast user experience without relying on external CDNs.
-- [ ] to have a simple and clear UI that reflects the "Spotify Wrapped" aesthetic so that I can enjoy a familiar and engaging experience.
-- [ ] to have the application built with simplicity in mind so that it is easy to understand, maintain, and extend in the future.
-- [ ] to have the application use server-side rendering (SSR) with Go templates so that the pages load quickly and are SEO-friendly.
-- [ ] to have the database schema managed in a dedicated file so that I can easily understand and modify the data structure if needed.
-- [ ] to have the application follow TDD principles so that I can ensure high code quality and reliability.
-- [ ] to guess songs without scrolling to the top of the page so that I can have a seamless gaming experience.
-- [ ] be able to run this application with docker so that I can easily deploy and manage it in different environments.
-- [ ] to have clear service boundaries for Party Management and Competition Logic so that the codebase is organized and maintainable.
+## Competition & Guessing
+- [x] As a user, I want to see a shuffled list of songs each round so that the guessing is fair.
+- [x] As a user, I want to guess which song belongs to which participant to earn points.
+- [x] As a user, I want my guesses to be remembered if I refresh the page so that I don't lose progress.
+- [x] As a user, I want the UI to lock my guess after submission so that I cannot change my answer.
+- [x] As an admin, I want to move the game to the next round so that the competition progresses.
+
+## Results & Leaderboards
+- [ ] As a user, I want to see a leaderboard after each round showing round-specific results and overall standings.
+- [ ] As a user, I want to see the correct owners of the songs from the previous round revealed.
+
+## Technical & Experience
+- [x] As an admin, I want my actions (Start, Next Round) to be secured by my token so that only I can control the game.
+- [x] As a user, I want the UI to reflect a "Spotify Wrapped" aesthetic for a fun and familiar experience.
+- [x] As a user, I want the application to be fast and responsive via server-side rendering.
+- [x] As a developer, I want the application to log events to a file for easier troubleshooting.
+- [x] As a developer, I want a comprehensive test suite to ensure the game logic is reliable.
+- [x] As a developer, I want to serve all assets (like Pico CSS) locally to avoid external dependencies.
+- [ ] As a developer, I want to run the application using Docker for consistent deployment.
