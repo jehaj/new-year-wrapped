@@ -1,13 +1,22 @@
 package party
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
+	"net/http"
 	"time"
 )
+
+type SongInput struct {
+	Title        string `json:"title"`
+	YouTubeID    string `json:"youtube_id"`
+	ThumbnailURL string `json:"thumbnail_url"`
+}
 
 type Service struct {
 	db     *sql.DB
@@ -25,7 +34,7 @@ func (s *Service) log(partyID string, format string, v ...interface{}) {
 	}
 }
 
-func (s *Service) JoinParty(ctx context.Context, partyID string, userName string, songs []string) error {
+func (s *Service) JoinParty(ctx context.Context, partyID string, userName string, songs []SongInput) error {
 	s.log(partyID, "User %s joining with %d songs", userName, len(songs))
 	if len(songs) != 3 {
 		return fmt.Errorf("exactly 3 songs are required, got %d", len(songs))
@@ -60,7 +69,7 @@ func (s *Service) JoinParty(ctx context.Context, partyID string, userName string
 
 	// Create songs
 	for _, song := range songs {
-		_, err = tx.ExecContext(ctx, "INSERT INTO songs (user_id, title) VALUES (?, ?)", userID, song)
+		_, err = tx.ExecContext(ctx, "INSERT INTO songs (user_id, title, youtube_id, thumbnail_url) VALUES (?, ?, ?, ?)", userID, song.Title, song.YouTubeID, song.ThumbnailURL)
 		if err != nil {
 			return err
 		}
@@ -149,8 +158,10 @@ func (s *Service) StartCompetition(ctx context.Context, partyID string) error {
 }
 
 type Song struct {
-	ID    int    `json:"id"`
-	Title string `json:"title"`
+	ID           int    `json:"id"`
+	Title        string `json:"title"`
+	YouTubeID    string `json:"youtube_id"`
+	ThumbnailURL string `json:"thumbnail_url"`
 }
 
 func (s *Service) GetRoundSongs(ctx context.Context, partyID string, round int) ([]Song, error) {
@@ -164,7 +175,7 @@ func (s *Service) GetRoundSongs(ctx context.Context, partyID string, round int) 
 	endIndex := round*songsPerRound - 1
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT songs.id, songs.title 
+		SELECT songs.id, songs.title, songs.youtube_id, songs.thumbnail_url 
 		FROM songs 
 		JOIN users ON songs.user_id = users.id 
 		WHERE users.party_id = ? AND songs.shuffle_index BETWEEN ? AND ?
@@ -177,7 +188,7 @@ func (s *Service) GetRoundSongs(ctx context.Context, partyID string, round int) 
 	var songs []Song
 	for rows.Next() {
 		var s Song
-		if err := rows.Scan(&s.ID, &s.Title); err != nil {
+		if err := rows.Scan(&s.ID, &s.Title, &s.YouTubeID, &s.ThumbnailURL); err != nil {
 			return nil, err
 		}
 		songs = append(songs, s)
@@ -307,19 +318,161 @@ type User struct {
 
 // SongResult represents a song along with its actual owner, used for reveals.
 type SongResult struct {
-	ID        int    `json:"id"`
-	Title     string `json:"title"`
-	OwnerName string `json:"owner_name"`
+	ID           int    `json:"id"`
+	Title        string `json:"title"`
+	YouTubeID    string `json:"youtube_id"`
+	ThumbnailURL string `json:"thumbnail_url"`
+	OwnerName    string `json:"owner_name"`
 }
 
-func (s *Service) GetTotalSongs(ctx context.Context, partyID string) (int, error) {
-	var count int
-	err := s.db.QueryRowContext(ctx, `
-		SELECT COUNT(*) 
-		FROM songs 
-		JOIN users ON songs.user_id = users.id 
-		WHERE users.party_id = ?`, partyID).Scan(&count)
-	return count, err
+func (s *Service) SearchYouTubeMusic(ctx context.Context, query string) ([]SongInput, error) {
+	url := "https://music.youtube.com/youtubei/v1/search?prettyPrint=false"
+
+	body := map[string]interface{}{
+		"query": query,
+		"context": map[string]interface{}{
+			"client": map[string]interface{}{
+				"clientName":    "WEB_REMIX",
+				"clientVersion": "1.20251215.03.00",
+				"hl":            "en",
+				"gl":            "US",
+			},
+		},
+	}
+
+	jsonBody, _ := json.Marshal(body)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0")
+
+	fmt.Println("Searching YouTube Music for query:", query)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	fmt.Println("Received response from YouTube Music with status:", resp.Status)
+
+	var result struct {
+		Contents struct {
+			TabbedSearchResultsRenderer struct {
+				Tabs []struct {
+					TabRenderer struct {
+						Content struct {
+							SectionListRenderer struct {
+								Contents []struct {
+									MusicShelfRenderer struct {
+										Contents []struct {
+											MusicResponsiveListItemRenderer struct {
+												NavigationEndpoint struct {
+													WatchEndpoint struct {
+														VideoID string `json:"videoId"`
+													} `json:"watchEndpoint"`
+												} `json:"navigationEndpoint"`
+												FlexColumns []struct {
+													MusicResponsiveListItemFlexColumnRenderer struct {
+														Text struct {
+															Runs []struct {
+																Text string `json:"text"`
+															} `json:"runs"`
+														} `json:"text"`
+													} `json:"musicResponsiveListItemFlexColumnRenderer"`
+												} `json:"flexColumns"`
+												Thumbnail struct {
+													MusicThumbnailRenderer struct {
+														Thumbnail struct {
+															Thumbnails []struct {
+																URL string `json:"url"`
+															} `json:"thumbnails"`
+														} `json:"thumbnail"`
+													} `json:"musicThumbnailRenderer"`
+												} `json:"thumbnail"`
+											} `json:"musicResponsiveListItemRenderer"`
+										} `json:"contents"`
+									} `json:"musicShelfRenderer"`
+								} `json:"contents"`
+							} `json:"sectionListRenderer"`
+						} `json:"content"`
+					} `json:"tabRenderer"`
+				} `json:"tabs"`
+			} `json:"tabbedSearchResultsRenderer"`
+		} `json:"contents"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	fmt.Println("Parsed YouTube Music search results successfully")
+
+	var songs []SongInput
+	// Navigate the complex YouTube Music JSON structure
+	if len(result.Contents.TabbedSearchResultsRenderer.Tabs) > 0 {
+		sectionList := result.Contents.TabbedSearchResultsRenderer.Tabs[0].TabRenderer.Content.SectionListRenderer
+		for _, section := range sectionList.Contents {
+			fmt.Println("\n\nProcessing section:", section)
+			if section.MusicShelfRenderer.Contents != nil {
+				for _, item := range section.MusicShelfRenderer.Contents {
+					renderer := item.MusicResponsiveListItemRenderer
+					videoID := renderer.NavigationEndpoint.WatchEndpoint.VideoID
+					fmt.Println("Found video ID:", videoID)
+					if videoID == "" {
+						continue
+					}
+
+					title := ""
+					if len(renderer.FlexColumns) > 0 && len(renderer.FlexColumns[0].MusicResponsiveListItemFlexColumnRenderer.Text.Runs) > 0 {
+						title = renderer.FlexColumns[0].MusicResponsiveListItemFlexColumnRenderer.Text.Runs[0].Text
+					}
+
+					thumbnailURL := ""
+					if len(renderer.Thumbnail.MusicThumbnailRenderer.Thumbnail.Thumbnails) > 0 {
+						thumbnailURL = renderer.Thumbnail.MusicThumbnailRenderer.Thumbnail.Thumbnails[0].URL
+					}
+
+					songs = append(songs, SongInput{
+						Title:        title,
+						YouTubeID:    videoID,
+						ThumbnailURL: thumbnailURL,
+					})
+				}
+			}
+		}
+	}
+
+	fmt.Println("Got", len(songs), "songs from YouTube Music search")
+
+	return songs, nil
+}
+
+func (s *Service) GetPartySongs(ctx context.Context, partyID string) ([]SongResult, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT s.id, s.title, s.youtube_id, s.thumbnail_url, u.name
+		FROM songs s
+		JOIN users u ON s.user_id = u.id
+		WHERE u.party_id = ?
+		ORDER BY u.name ASC, s.id ASC`, partyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var songs []SongResult
+	for rows.Next() {
+		var s SongResult
+		if err := rows.Scan(&s.ID, &s.Title, &s.YouTubeID, &s.ThumbnailURL, &s.OwnerName); err != nil {
+			return nil, err
+		}
+		songs = append(songs, s)
+	}
+	return songs, nil
 }
 
 // GetUsers returns all participants in a party.
@@ -361,7 +514,7 @@ func (s *Service) GetRoundResults(ctx context.Context, partyID string, round int
 	endIndex := round*songsPerRound - 1
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT s.id, s.title, u.name
+		SELECT s.id, s.title, s.youtube_id, s.thumbnail_url, u.name
 		FROM songs s
 		JOIN users u ON s.user_id = u.id
 		WHERE u.party_id = ? AND s.shuffle_index BETWEEN ? AND ?
@@ -374,10 +527,20 @@ func (s *Service) GetRoundResults(ctx context.Context, partyID string, round int
 	var results []SongResult
 	for rows.Next() {
 		var r SongResult
-		if err := rows.Scan(&r.ID, &r.Title, &r.OwnerName); err != nil {
+		if err := rows.Scan(&r.ID, &r.Title, &r.YouTubeID, &r.ThumbnailURL, &r.OwnerName); err != nil {
 			return nil, err
 		}
 		results = append(results, r)
 	}
 	return results, nil
+}
+
+func (s *Service) GetTotalSongs(ctx context.Context, partyID string) (int, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) 
+		FROM songs 
+		JOIN users ON songs.user_id = users.id 
+		WHERE users.party_id = ?`, partyID).Scan(&count)
+	return count, err
 }

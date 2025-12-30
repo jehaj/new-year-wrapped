@@ -40,12 +40,14 @@ func main() {
 	mux.HandleFunc("GET /parties/{id}/results", partyHandler.GetRoundResults)
 	mux.HandleFunc("POST /parties/{id}/guess", partyHandler.SubmitGuess)
 	mux.HandleFunc("GET /parties/{id}/leaderboard", partyHandler.GetLeaderboard)
+	mux.HandleFunc("GET /api/search", partyHandler.SearchSongs)
 
 	// UI Routes
 	mux.HandleFunc("GET /", partyHandler.IndexPage)
 	mux.HandleFunc("GET /parties", partyHandler.UIPartyRedirect)
 	mux.HandleFunc("GET /parties/{id}", partyHandler.PartyPage)
 	mux.HandleFunc("GET /parties/{id}/game", partyHandler.GamePage)
+	mux.HandleFunc("GET /parties/{id}/song_list", partyHandler.SongListPage)
 
 	// UI Action Routes
 	mux.HandleFunc("POST /ui/parties/create", partyHandler.UICreateParty)

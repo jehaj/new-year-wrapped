@@ -16,8 +16,8 @@
 - [x] As an admin, I want to move the game to the next round so that the competition progresses.
 
 ## Results & Leaderboards
-- [ ] As a user, I want to see a leaderboard after each round showing round-specific results and overall standings.
-- [ ] As a user, I want to see the correct owners of the songs from the previous round revealed.
+- [x] As a user, I want to see a leaderboard after each round showing round-specific results and overall standings.
+- [x] As a user, I want to see the correct owners of the songs from the previous round revealed.
 
 ## Technical & Experience
 - [x] As an admin, I want my actions (Start, Next Round) to be secured by my token so that only I can control the game.
@@ -27,3 +27,7 @@
 - [x] As a developer, I want a comprehensive test suite to ensure the game logic is reliable.
 - [x] As a developer, I want to serve all assets (like Pico CSS) locally to avoid external dependencies.
 - [ ] As a developer, I want to run the application using Docker for consistent deployment.
+
+## YouTube Music Integration
+- [x] As a user, I want to search for my top songs using YouTube Music so that I can select the correct version.
+- [x] As an admin, I want to see a list of all songs with links to YouTube Music so that I can play them during the party.

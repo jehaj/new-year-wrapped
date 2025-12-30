@@ -38,7 +38,11 @@ func TestJoinParty(t *testing.T) {
 		// When: A user joins with 3 songs
 		// Then: The user and songs are created in the database
 		userName := "Nikolaj"
-		songs := []string{"Song 1", "Song 2", "Song 3"}
+		songs := []party.SongInput{
+			{Title: "Song 1", YouTubeID: "id1", ThumbnailURL: "thumb1"},
+			{Title: "Song 2", YouTubeID: "id2", ThumbnailURL: "thumb2"},
+			{Title: "Song 3", YouTubeID: "id3", ThumbnailURL: "thumb3"},
+		}
 
 		err := service.JoinParty(context.Background(), partyID, userName, songs)
 		if err != nil {
@@ -70,7 +74,9 @@ func TestJoinParty(t *testing.T) {
 		// Given: A party exists
 		// When: A user tries to join with 4 songs
 		// Then: An error is returned
-		err := service.JoinParty(context.Background(), partyID, "BadUser", []string{"1", "2", "3", "4"})
+		err := service.JoinParty(context.Background(), partyID, "BadUser", []party.SongInput{
+			{Title: "1"}, {Title: "2"}, {Title: "3"}, {Title: "4"},
+		})
 		if err == nil {
 			t.Error("expected error for 4 songs, got nil")
 		}
@@ -235,8 +241,8 @@ func TestGetUsers(t *testing.T) {
 	ctx := context.Background()
 
 	partyID, _, _ := svc.CreateParty(ctx, "Test Party")
-	svc.JoinParty(ctx, partyID, "Alice", []string{"S1", "S2", "S3"})
-	svc.JoinParty(ctx, partyID, "Bob", []string{"S4", "S5", "S6"})
+	svc.JoinParty(ctx, partyID, "Alice", []party.SongInput{{Title: "S1"}, {Title: "S2"}, {Title: "S3"}})
+	svc.JoinParty(ctx, partyID, "Bob", []party.SongInput{{Title: "S4"}, {Title: "S5"}, {Title: "S6"}})
 
 	// Given: A party with two users
 	// When: GetUsers is called
@@ -266,8 +272,8 @@ func TestGetRoundResults(t *testing.T) {
 	ctx := context.Background()
 
 	partyID, _, _ := svc.CreateParty(ctx, "Test Party")
-	svc.JoinParty(ctx, partyID, "Alice", []string{"S1", "S2", "S3"})
-	svc.JoinParty(ctx, partyID, "Bob", []string{"S4", "S5", "S6"})
+	svc.JoinParty(ctx, partyID, "Alice", []party.SongInput{{Title: "S1"}, {Title: "S2"}, {Title: "S3"}})
+	svc.JoinParty(ctx, partyID, "Bob", []party.SongInput{{Title: "S4"}, {Title: "S5"}, {Title: "S6"}})
 
 	// Start competition (shuffles songs)
 	if err := svc.StartCompetition(ctx, partyID); err != nil {

@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS songs (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	user_id INTEGER NOT NULL,
 	title TEXT NOT NULL,
+	youtube_id TEXT,
+	thumbnail_url TEXT,
 	shuffle_index INTEGER DEFAULT -1,
 	FOREIGN KEY (user_id) REFERENCES users(id)
 );

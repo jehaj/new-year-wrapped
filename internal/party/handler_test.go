@@ -61,8 +61,10 @@ func TestHandler_JoinParty(t *testing.T) {
 		// When: A POST request is made to /parties/{id}/join with valid user and songs
 		// Then: The user joins the party and a 200 status is returned
 		body, _ := json.Marshal(map[string]interface{}{
-			"name":  "Nikolaj",
-			"songs": []string{"Song A", "Song B", "Song C"},
+			"name": "Nikolaj",
+			"songs": []party.SongInput{
+				{Title: "Song A"}, {Title: "Song B"}, {Title: "Song C"},
+			},
 		})
 		// We'll use a simple way to pass the ID since we aren't using a router yet in the test
 		req := httptest.NewRequest("POST", "/parties/p1/join", bytes.NewBuffer(body))
@@ -84,8 +86,10 @@ func TestHandler_JoinParty(t *testing.T) {
 		// When: A POST request is made to /parties/{id}/join
 		// Then: A 500 status is returned
 		body, _ := json.Marshal(map[string]interface{}{
-			"name":  "Nikolaj",
-			"songs": []string{"Song A", "Song B", "Song C"},
+			"name": "Nikolaj",
+			"songs": []party.SongInput{
+				{Title: "Song A"}, {Title: "Song B"}, {Title: "Song C"},
+			},
 		})
 		req := httptest.NewRequest("POST", "/parties/non-existent/join", bytes.NewBuffer(body))
 		rr := httptest.NewRecorder()
@@ -103,7 +107,7 @@ func TestHandler_JoinParty(t *testing.T) {
 		// Then: A 500 status is returned
 		body, _ := json.Marshal(map[string]interface{}{
 			"name":  "Nikolaj",
-			"songs": []string{"Song A"},
+			"songs": []party.SongInput{{Title: "Song A"}},
 		})
 		req := httptest.NewRequest("POST", "/parties/p1/join", bytes.NewBuffer(body))
 		rr := httptest.NewRecorder()
@@ -127,7 +131,7 @@ func TestHandler_Competition(t *testing.T) {
 	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
 	userID, _ := res.LastInsertId()
 	for i := 1; i <= 3; i++ {
-		_, _ = database.Exec("INSERT INTO songs (user_id, title) VALUES (?, ?)", userID, fmt.Sprintf("Song %d", i))
+		_, _ = database.Exec("INSERT INTO songs (user_id, title, youtube_id, thumbnail_url) VALUES (?, ?, '', '')", userID, fmt.Sprintf("Song %d", i))
 	}
 
 	service := party.NewService(database, nil)
@@ -186,7 +190,7 @@ func TestHandler_Guessing(t *testing.T) {
 	// Alice owns Song 1
 	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
 	aliceID, _ := res.LastInsertId()
-	res, _ = database.Exec("INSERT INTO songs (user_id, title, shuffle_index) VALUES (?, ?, 0)", aliceID, "Song 1")
+	res, _ = database.Exec("INSERT INTO songs (user_id, title, youtube_id, thumbnail_url, shuffle_index) VALUES (?, ?, '', '', 0)", aliceID, "Song 1")
 	song1ID, _ := res.LastInsertId()
 
 	// Bob is the guesser
@@ -218,9 +222,10 @@ func TestHandler_Guessing(t *testing.T) {
 	})
 
 	t.Run("Get leaderboard", func(t *testing.T) {
-		// Given: A competition with recorded guesses and a revealed round
-		// When: A GET request is made to /parties/{id}/leaderboard
-		// Then: The leaderboard is returned with a 200 status
+		// Given: A competition with recorded guesses
+		// When: A GET request is made to /parties/{id}/leaderboard after revealing results
+		handler.NextRound(httptest.NewRecorder(), httptest.NewRequest("POST", "/parties/"+partyID+"/next", nil))
+
 		req := httptest.NewRequest("GET", "/parties/"+partyID+"/leaderboard", nil)
 		rr := httptest.NewRecorder()
 		handler.GetLeaderboard(rr, req)
@@ -253,7 +258,7 @@ func TestGetUsersHandler(t *testing.T) {
 	h := party.NewHandler(svc)
 
 	partyID, _, _ := svc.CreateParty(context.Background(), "Test Party")
-	svc.JoinParty(context.Background(), partyID, "Alice", []string{"S1", "S2", "S3"})
+	svc.JoinParty(context.Background(), partyID, "Alice", []party.SongInput{{Title: "S1"}, {Title: "S2"}, {Title: "S3"}})
 
 	req := httptest.NewRequest("GET", "/parties/"+partyID+"/users", nil)
 	// Mock path value for Go 1.22+
@@ -276,7 +281,58 @@ func TestGetUsersHandler(t *testing.T) {
 	}
 }
 
-func TestGetRoundResultsHandler(t *testing.T) {
+func TestHandler_GetLeaderboard(t *testing.T) {
+	database, _ := sql.Open("sqlite3", ":memory:")
+	defer database.Close()
+	_, _ = database.Exec(db.Schema)
+	partyID := "leaderboard-h"
+	_, _ = database.Exec("INSERT INTO parties (id, name, admin_token, started, current_round) VALUES (?, ?, ?, TRUE, 1)", partyID, "Leaderboard Handler Party", "token")
+
+	// Alice owns Song 1
+	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
+	aliceID, _ := res.LastInsertId()
+	res, _ = database.Exec("INSERT INTO songs (user_id, title, youtube_id, thumbnail_url, shuffle_index) VALUES (?, ?, '', '', 0)", aliceID, "Song 1")
+	song1ID, _ := res.LastInsertId()
+
+	// Bob is the guesser
+	res, _ = database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Bob")
+	bobID, _ := res.LastInsertId()
+
+	// Record a guess
+	_, _ = database.Exec("INSERT INTO guesses (guesser_id, song_id, guessed_user_id) VALUES (?, ?, ?)", bobID, song1ID, aliceID)
+
+	service := party.NewService(database, nil)
+	handler := party.NewHandler(service)
+
+	t.Run("Get leaderboard", func(t *testing.T) {
+		// Given: A competition with recorded guesses
+		// When: A GET request is made to /parties/{id}/leaderboard after revealing results
+		handler.NextRound(httptest.NewRecorder(), httptest.NewRequest("POST", "/parties/"+partyID+"/next", nil))
+
+		req := httptest.NewRequest("GET", "/parties/"+partyID+"/leaderboard", nil)
+		rr := httptest.NewRecorder()
+		handler.GetLeaderboard(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", rr.Code)
+		}
+
+		var leaderboard []party.LeaderboardEntry
+		json.NewDecoder(rr.Body).Decode(&leaderboard)
+
+		found := false
+		for _, entry := range leaderboard {
+			if entry.UserName == "Bob" && entry.Score == 1 {
+				found = true
+			}
+		}
+		if !found {
+			t.Error("Bob with score 1 not found in leaderboard")
+		}
+	})
+}
+
+func TestHandler_GetRoundResults(t *testing.T) {
 	dbConn, _ := sql.Open("sqlite3", ":memory:")
 	defer dbConn.Close()
 	dbConn.Exec(db.Schema)
@@ -285,7 +341,7 @@ func TestGetRoundResultsHandler(t *testing.T) {
 	h := party.NewHandler(svc)
 
 	partyID, _, _ := svc.CreateParty(context.Background(), "Test Party")
-	svc.JoinParty(context.Background(), partyID, "Alice", []string{"S1", "S2", "S3"})
+	svc.JoinParty(context.Background(), partyID, "Alice", []party.SongInput{{Title: "S1"}, {Title: "S2"}, {Title: "S3"}})
 	svc.StartCompetition(context.Background(), partyID)
 	svc.NextRound(context.Background(), partyID)
 

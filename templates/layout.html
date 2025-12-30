@@ -61,12 +61,107 @@
     <main class="container">
         {{if not .Party}}
         {{template "index" .}}
+        {{else if .Songs}}
+        {{template "song_list" .}}
         {{else if .Started}}
         {{template "game" .}}
         {{else}}
         {{template "party" .}}
         {{end}}
     </main>
+
+    <script>
+        async function searchSongs(input, resultsId, songNum) {
+            const query = input.value;
+            const resultsDiv = document.getElementById(resultsId);
+            if (query.length < 3) {
+                resultsDiv.innerHTML = '';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const songs = await response.json();
+
+                resultsDiv.innerHTML = '';
+                songs.forEach(song => {
+                    const div = document.createElement('div');
+                    div.className = 'search-result';
+                    div.style.padding = '0.5rem';
+                    div.style.cursor = 'pointer';
+                    div.style.borderBottom = '1px solid #282828';
+                    div.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <img data-src="${song.thumbnail_url}" class="lazy-thumb" style="width: 40px; height: 40px; border-radius: 4px; background: #282828;">
+                            <span>${song.title}</span>
+                        </div>
+                    `;
+                    div.onclick = () => {
+                        input.value = song.title;
+                        document.getElementById(`song${songNum}_id`).value = song.youtube_id;
+                        document.getElementById(`song${songNum}_thumb`).value = song.thumbnail_url;
+                        resultsDiv.innerHTML = '';
+                    };
+                    resultsDiv.appendChild(div);
+                });
+
+                loadImagesLazy();
+            } catch (err) {
+                console.error('Search failed', err);
+            }
+        }
+
+        let imageQueue = [];
+        let isProcessingQueue = false;
+
+        function loadImagesLazy() {
+            const images = document.querySelectorAll('.lazy-thumb[data-src]');
+            images.forEach(img => {
+                if (!imageQueue.includes(img)) {
+                    imageQueue.push(img);
+                }
+            });
+            if (!isProcessingQueue) {
+                processImageQueue();
+            }
+        }
+
+        async function processImageQueue() {
+            if (imageQueue.length === 0) {
+                isProcessingQueue = false;
+                return;
+            }
+            isProcessingQueue = true;
+            const img = imageQueue.shift();
+            const src = img.getAttribute('data-src');
+
+            try {
+                await loadImageWithRetry(img, src);
+            } catch (e) {
+                console.error('Failed to load image', src);
+            }
+
+            setTimeout(processImageQueue, 250);
+        }
+
+        async function loadImageWithRetry(img, src, retryCount = 0) {
+            return new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = async () => {
+                    if (retryCount < 3) {
+                        const delay = Math.pow(2, retryCount) * 1000;
+                        setTimeout(() => {
+                            loadImageWithRetry(img, src, retryCount + 1).then(resolve).catch(reject);
+                        }, delay);
+                    } else {
+                        reject();
+                    }
+                };
+                img.src = src;
+                img.removeAttribute('data-src');
+            });
+        }
+    </script>
 </body>
 
 </html>
@@ -101,18 +196,71 @@
     {{if not .UserJoined}}
     <div id="join-section">
         <h3>Join the Party</h3>
-        <form action="/ui/parties/{{.Party.ID}}/join" method="POST">
+        <form action="/ui/parties/{{.Party.ID}}/join" method="POST" onsubmit="return validateSongs()">
             <input type="hidden" name="admin_token" value="{{.AdminToken}}">
             <input type="text" name="user_name" placeholder="Your Name" required>
             <fieldset>
                 <legend>Your Top 3 Songs</legend>
-                <input type="text" name="song1" placeholder="Song 1" required>
-                <input type="text" name="song2" placeholder="Song 2" required>
-                <input type="text" name="song3" placeholder="Song 3" required>
+                <div class="song-input-group">
+                    <input type="text" name="song1" id="song1" placeholder="Search Song 1..." required
+                        oninput="searchSongs(this, 'results1', 1)" autocomplete="off">
+                    <input type="hidden" name="song1_id" id="song1_id">
+                    <input type="hidden" name="song1_thumb" id="song1_thumb">
+                    <div id="results1" class="search-results-container"></div>
+                </div>
+                <div class="song-input-group">
+                    <input type="text" name="song2" id="song2" placeholder="Search Song 2..." required
+                        oninput="searchSongs(this, 'results2', 2)" autocomplete="off">
+                    <input type="hidden" name="song2_id" id="song2_id">
+                    <input type="hidden" name="song2_thumb" id="song2_thumb">
+                    <div id="results2" class="search-results-container"></div>
+                </div>
+                <div class="song-input-group">
+                    <input type="text" name="song3" id="song3" placeholder="Search Song 3..." required
+                        oninput="searchSongs(this, 'results3', 3)" autocomplete="off">
+                    <input type="hidden" name="song3_id" id="song3_id">
+                    <input type="hidden" name="song3_thumb" id="song3_thumb">
+                    <div id="results3" class="search-results-container"></div>
+                </div>
             </fieldset>
             <button type="submit">Submit & Join</button>
         </form>
     </div>
+
+    <script>
+        function validateSongs() {
+            if (!document.getElementById('song1_id').value ||
+                !document.getElementById('song2_id').value ||
+                !document.getElementById('song3_id').value) {
+                alert('Please select all 3 songs from the search suggestions.');
+                return false;
+            }
+            return true;
+        }
+    </script>
+    <style>
+        .song-input-group {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .search-results-container {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #181818;
+            border: 1px solid #282828;
+            z-index: 100;
+            max-height: 200px;
+            overflow-y: auto;
+            border-radius: 0 0 0.5rem 0.5rem;
+        }
+
+        .search-result:hover {
+            background: #282828;
+        }
+    </style>
     {{else}}
     <div id="waiting-room">
         <h3>Waiting for players...</h3>
@@ -126,6 +274,8 @@
                 <input type="hidden" name="user_name" value="{{.UserName}}">
                 <button type="submit">Start Competition</button>
             </form>
+            <a href="/parties/{{.Party.ID}}/song_list?admin_token={{.AdminToken}}" role="button" class="secondary">View
+                Song List</a>
             {{else}}
             <p>Waiting for admin to start...</p>
             {{end}}
@@ -245,6 +395,8 @@
                 {{if .ShowResults}}Next Round{{else}}Reveal Results{{end}}
             </button>
         </form>
+        <a href="/parties/{{.Party.ID}}/song_list?admin_token={{.AdminToken}}" role="button" class="secondary">View Song
+            List</a>
         {{end}}
 
         <form action="/parties/{{.Party.ID}}/game" method="GET">
@@ -252,6 +404,41 @@
             <input type="hidden" name="admin_token" value="{{.AdminToken}}">
             <button type="submit" class="secondary">Refresh Round</button>
         </form>
+    </div>
+</section>
+{{end}}
+
+{{define "song_list"}}
+<section id="song-list">
+    <header>
+        <h3>Party Song List</h3>
+        <p>Admin view of all songs in the party.</p>
+    </header>
+
+    <div class="grid">
+        {{range .Songs}}
+        <article class="card">
+            <header>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <img src="{{.ThumbnailURL}}" style="width: 60px; height: 60px; border-radius: 4px;">
+                    <div>
+                        <strong>{{.Title}}</strong><br>
+                        <small>Owner: {{.OwnerName}}</small>
+                    </div>
+                </div>
+            </header>
+            <footer>
+                <a href="https://music.youtube.com/watch?v={{.YouTubeID}}" target="_blank" role="button"
+                    class="secondary">Play on YouTube Music</a>
+            </footer>
+        </article>
+        {{else}}
+        <p>No songs have been added yet.</p>
+        {{end}}
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <a href="/parties/{{.Party.ID}}/game?admin_token={{.AdminToken}}" role="button">Back to Game</a>
     </div>
 </section>
 {{end}}

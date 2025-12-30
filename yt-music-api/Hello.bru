@@ -1,0 +1,192 @@
+meta {
+  name: Hello
+  type: http
+  seq: 4
+}
+
+post {
+  url: https://music.youtube.com/youtubei/v1/music/get_search_suggestions?prettyPrint=false
+  body: json
+  auth: inherit
+}
+
+params:query {
+  prettyPrint: false
+}
+
+headers {
+  Accept-Encoding: gzip, deflate, br, zstd
+  User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0
+  Accept: */*
+  Accept-Language: da,en-US;q=0.7,en;q=0.3
+  Content-Type: application/json
+  Referer: https://music.youtube.com/
+  X-Goog-Visitor-Id: CgtlYTZGcTJLX0FCVSiVoNHKBjInCgJESxIhEh0SGwsMDg8QERITFBUWFxgZGhscHR4fICEiIyQlJiBmYuACCt0CMTIuWVRFPWlRZlBZWm1ybTl0WTBnY1ZOdXhwV2RRUUZzU1pJc1BPeGI1bkhEdFFDNy0yYjJUZXBzTTVNd0lWWFRGREo2SlI1aE1SNldQM1NpWkZ0czhEM0pjTjZPMjhDeWtENkdpcEktMVdQWXVWcnI5WUdvd01EVTV2bTBIeXVvLUlleFhFVnpHU2tfN3pPRHFicERaX2VpSnk5TE50RmFQVnZ5aTFkNGY3b1FRQVpnMU5FWUJmT0VDVEtPaTNxdEpxMnFHOVU2QUxzRzFiMHk3S2xIamp0U1Y2RndXOC1rRVpSbzhmV29kQWhOQ0Q3RzZYUUQwZG96dWxNMjIzSDZjc1JVNE5UNmZRVDhRZ2pYUVNFWTBMS1VwOHhXN3ZqTWlramNmeFdEcnVBSVAxaG82aW1wMlNYc2dMV0tRWkd3N3dzVURYU0t0ZHNVdGNHT2p2bVFNNGNjYm5RZw%3D%3D
+  X-Youtube-Bootstrap-Logged-In: true
+  X-Youtube-Client-Name: 67
+  X-Youtube-Client-Version: 1.20251215.03.00
+  X-Goog-AuthUser: 0
+  X-Origin: https://music.youtube.com
+  Origin: https://music.youtube.com
+  Sec-Fetch-Dest: empty
+  Sec-Fetch-Mode: same-origin
+  Sec-Fetch-Site: same-origin
+  Authorization: SAPISIDHASH 1767133234_7bc79e2d771a3e048a1ae1af8afaa0c761e22080_u SAPISID1PHASH 1767133234_7bc79e2d771a3e048a1ae1af8afaa0c761e22080_u SAPISID3PHASH 1767133234_7bc79e2d771a3e048a1ae1af8afaa0c761e22080_u
+  Connection: keep-alive
+  Alt-Used: music.youtube.com
+  Cookie: __Secure-1PSIDTS=sidts-CjUBflaCdZzKytHVmoixO1QV0uUMOCa5j8X8IVyJgYkjOZS_8Wrm3E3yMivAMxVOlkXkL5HX9xAA; __Secure-3PSIDTS=sidts-CjUBflaCdZzKytHVmoixO1QV0uUMOCa5j8X8IVyJgYkjOZS_8Wrm3E3yMivAMxVOlkXkL5HX9xAA; HSID=ALQzkyWpPG_IyVAgy; SSID=AX5abQFPdRhtdOgmV; APISID=aJbqFc6Z7CRf9fHG/AREb9kx8B5PVF-Bj2; SAPISID=Jh9yBEr28296-osX/ALN9cBvHDVgBqQxMP; __Secure-1PAPISID=Jh9yBEr28296-osX/ALN9cBvHDVgBqQxMP; __Secure-3PAPISID=Jh9yBEr28296-osX/ALN9cBvHDVgBqQxMP; SID=g.a0004Aj8V-cdZ2zvd1ZVfIG7PvQLSqaK7pbUvoWO1OEnN705yww2BReXV6n84qS-R_K8XSoEuwACgYKAaoSARQSFQHGX2Mi2hg_TlUBfdLunuGvDFNO3hoVAUF8yKqs_-d_cvc4a1y7gUXZSbhS0076; __Secure-1PSID=g.a0004Aj8V-cdZ2zvd1ZVfIG7PvQLSqaK7pbUvoWO1OEnN705yww2EspOlYTyV1nOVCl0d4zcygACgYKAYkSARQSFQHGX2MinpfWmXvRXln8HANqCL618xoVAUF8yKoeTo54JqEy36CYX8rTNpls0076; __Secure-3PSID=g.a0004Aj8V-cdZ2zvd1ZVfIG7PvQLSqaK7pbUvoWO1OEnN705yww24EDyCvjXZJBwg_wGiOG56QACgYKAS8SARQSFQHGX2Miek50nGjB2sYVpOAUJpfo5BoVAUF8yKocQvKSMhKSVaph0HqKRLgU0076; PREF=f6=80&tz=Europe.Copenhagen&f5=30000&f7=100&repeat=NONE&volume=100&f4=4000000&autoplay=true; __Secure-ROLLOUT_TOKEN=CJHv_NHKqpvS3wEQxPWe-OnGkAMYmqiymp_mkQM%3D; __Secure-YEC=CgtlYTZGcTJLX0FCVSiVoNHKBjInCgJESxIhEh0SGwsMDg8QERITFBUWFxgZGhscHR4fICEiIyQlJiBmYuACCt0CMTIuWVRFPWlRZlBZWm1ybTl0WTBnY1ZOdXhwV2RRUUZzU1pJc1BPeGI1bkhEdFFDNy0yYjJUZXBzTTVNd0lWWFRGREo2SlI1aE1SNldQM1NpWkZ0czhEM0pjTjZPMjhDeWtENkdpcEktMVdQWXVWcnI5WUdvd01EVTV2bTBIeXVvLUlleFhFVnpHU2tfN3pPRHFicERaX2VpSnk5TE50RmFQVnZ5aTFkNGY3b1FRQVpnMU5FWUJmT0VDVEtPaTNxdEpxMnFHOVU2QUxzRzFiMHk3S2xIamp0U1Y2RndXOC1rRVpSbzhmV29kQWhOQ0Q3RzZYUUQwZG96dWxNMjIzSDZjc1JVNE5UNmZRVDhRZ2pYUVNFWTBMS1VwOHhXN3ZqTWlramNmeFdEcnVBSVAxaG82aW1wMlNYc2dMV0tRWkd3N3dzVURYU0t0ZHNVdGNHT2p2bVFNNGNjYm5RZw%3D%3D; VISITOR_PRIVACY_METADATA=CgJESxIhEh0SGwsMDg8QERITFBUWFxgZGhscHR4fICEiIyQlJiBm; SIDCC=AKEyXzU4vCVk1V8LSFntIwFyfH76rictZYNLrLplXKSu_SXs6KKvzuvxSA9cY_tj5kfNnLE-g8k; __Secure-1PSIDCC=AKEyXzU4szj3qI2ASBjFUjurUBxsuuJr4SperP3t8agYKQ2Z50fXnRs724ZFCuJKnzNvYq9J00M; __Secure-3PSIDCC=AKEyXzWY8zSTZxCY9aQNU7vPsfjS-WggYjDe7HTOzXIp_C6HIHKmsPZEMUuSgWGUSdJoGiehO8w; LOGIN_INFO=AFmmF2swRgIhAMDP2zzaXcusPvIwdnyUs569nAFsGz8tJzcQ8nCROPvvAiEAuNs88efwuJ0eCsb53c9ll5BoMDtgw0H25dcDdCGvlKk:QUQ3MjNmemU2RTZEUVdCVUxUNUVQbFd0RXpXb29kZEMxdHp1Zzl3R3h5UVFGTVdxRlZINmtmNFJyZ2NqaHFqSU9BODY2NTZQOFloWXQ2TmNGVzFkLU9xMjdiaEVFWGNSNnRVZXdTZmpYZ1U3NkRFRjExMzZTTmV3alRIcWxZdkFYbUd4WnJsR18zZGM3LS1HR05GQlpvVU5acGU1bVhqQXl3; __Secure-YENID=12.YTE=iQfPYZmrm9tY0gcVNuxpWdQQFsSZIsPOxb5nHDtQC7-2b2TepsM5MwIVXTFDJ6JR5hMR6WP3SiZFts8D3JcN6O28CykD6GipI-1WPYuVrr9YGowMDU5vm0Hyuo-IexXEVzGSk_7zODqbpDZ_eiJy9LNtFaPVvyi1d4f7oQQAZg1NEYBfOECTKOi3qtJq2qG9U6ALsG1b0y7KlHjjtSV6FwW8-kEZRo8fWodAhNCD7G6XQD0dozulM223H6csRU4NT6fQT8QgjXQSEY0LKUp8xW7vjMikjcfxWDruAIP1ho6imp2SXsgLWKQZGw7wsUDXSKtdsUtcGOjvmQM4ccbnQg; YSC=ZUKPwUV9yb8; wide=1; CONSISTENCY=APeVyi8C5VWgwqZ7zmihZLpaFvbEGUymArqR8EaSKiuZDtdeW_I3OxmvTSgt1Esg3nVXSeh9T2IJYM8vmryyjomehXBi7ei-_sNuCcgvWgnUJzpwY2Znkjap4BK9vLqZ_J8-GY_BVTJfy099U-pZTrMT2LyEnqKRuJR7ydOaaiPDpFXnE0vNaDfzxnQMzFH7UvAPeKFg9nZjEwpRL3dV5i7qhJhYvdw; ST-183jmdn=session_logininfo=AFmmF2swRgIhAMDP2zzaXcusPvIwdnyUs569nAFsGz8tJzcQ8nCROPvvAiEAuNs88efwuJ0eCsb53c9ll5BoMDtgw0H25dcDdCGvlKk%3AQUQ3MjNmemU2RTZEUVdCVUxUNUVQbFd0RXpXb29kZEMxdHp1Zzl3R3h5UVFGTVdxRlZINmtmNFJyZ2NqaHFqSU9BODY2NTZQOFloWXQ2TmNGVzFkLU9xMjdiaEVFWGNSNnRVZXdTZmpYZ1U3NkRFRjExMzZTTmV3alRIcWxZdkFYbUd4WnJsR18zZGM3LS1HR05GQlpvVU5acGU1bVhqQXl3
+  Priority: u=4
+  TE: trailers
+}
+
+body:json {
+  {
+    "input": "hello",
+    "context": {
+      "client": {
+        "hl": "da",
+        "gl": "DK",
+        "remoteHost": "77.33.150.198",
+        "deviceMake": "",
+        "deviceModel": "",
+        "visitorData": "CgtlYTZGcTJLX0FCVSiVoNHKBjInCgJESxIhEh0SGwsMDg8QERITFBUWFxgZGhscHR4fICEiIyQlJiBmYuACCt0CMTIuWVRFPWlRZlBZWm1ybTl0WTBnY1ZOdXhwV2RRUUZzU1pJc1BPeGI1bkhEdFFDNy0yYjJUZXBzTTVNd0lWWFRGREo2SlI1aE1SNldQM1NpWkZ0czhEM0pjTjZPMjhDeWtENkdpcEktMVdQWXVWcnI5WUdvd01EVTV2bTBIeXVvLUlleFhFVnpHU2tfN3pPRHFicERaX2VpSnk5TE50RmFQVnZ5aTFkNGY3b1FRQVpnMU5FWUJmT0VDVEtPaTNxdEpxMnFHOVU2QUxzRzFiMHk3S2xIamp0U1Y2RndXOC1rRVpSbzhmV29kQWhOQ0Q3RzZYUUQwZG96dWxNMjIzSDZjc1JVNE5UNmZRVDhRZ2pYUVNFWTBMS1VwOHhXN3ZqTWlramNmeFdEcnVBSVAxaG82aW1wMlNYc2dMV0tRWkd3N3dzVURYU0t0ZHNVdGNHT2p2bVFNNGNjYm5RZw%3D%3D",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0,gzip(gfe)",
+        "clientName": "WEB_REMIX",
+        "clientVersion": "1.20251215.03.00",
+        "osName": "X11",
+        "osVersion": "",
+        "originalUrl": "https://music.youtube.com/watch?v=yjo_aXygRDI",
+        "screenPixelDensity": 2,
+        "platform": "DESKTOP",
+        "clientFormFactor": "UNKNOWN_FORM_FACTOR",
+        "configInfo": {
+          "appInstallData": "CJWg0coGEOWk0BwQzOvPHBCUttAcELvZzhwQmrnQHBC8pNAcELy_0BwQj7nQHBC4wNAcEL2KsAUQyPfPHBCu1s8cENPhrwUQt8nPHBC36v4SEJT-sAUQpZ-pFxCnn6kXENrB0BwQq53PHBCTmYATEI2w0BwQ8rPQHBC9tq4FEIHNzhwQ8czPHBCW288cENq00BwQyfevBRCU8s8cENiW0BwQ8bTQHBCL988cEIOe0BwQvLOAExD8ss4cEKOFuCIQndfPHBCmttAcEImwzhwQ2vfOHBDwnc8cEParsAUQlffPHBDmh9AcEN68zhwQx7bQHBDKu9AcEMGP0BwQjOnPHBCUg9AcEJmNsQUQiIewBRC52c4cEJ3QsAUQh6zOHBC9mbAFELjkzhwQ4cGAExDM364FEOCCgBMQ8p3QHBCut9AcEKqK0BwqTENBTVNOUlUyLVpxLURMaVVFdlVBaVFhcUFzd0Z0c193Q3pLX1gtblZCUVBOX3dXaGdBYWlMczdVQnZVdjlnX3ZNSmJkQlpLLUJoMEgwAA%3D%3D",
+          "coldConfigData": "CJWg0coGGjJBQ0RTUjJUWFBsVUNSQ2lWaGVITmQ5QVVZQTJmc19sa0RPY0lHWkU4V3daX3Z4bVpnZyIyQUNEU1IyUktJTkFMbVI4QVFua2xSY0tQbXYwRVlMNEdISDRDUU5ncTU2SUlQdTViSlE%3D",
+          "coldHashData": "CJWg0coGEhM4MzcyMjg4Nzg1MDY2MDg0NzkyGJWg0coGMjJBQ0RTUjJUWFBsVUNSQ2lWaGVITmQ5QVVZQTJmc19sa0RPY0lHWkU4V3daX3Z4bVpnZzoyQUNEU1IyUktJTkFMbVI4QVFua2xSY0tQbXYwRVlMNEdISDRDUU5ncTU2SUlQdTViSlE%3D",
+          "hotHashData": "CJWg0coGEhQxMTA5ODYyMTU5OTgwMDU0NTg3ORiVoNHKBjIyQUNEU1IyVFhQbFVDUkNpVmhlSE5kOUFVWUEyZnNfbGtET2NJR1pFOFd3Wl92eG1aZ2c6MkFDRFNSMlJLSU5BTG1SOEFRbmtsUmNLUG12MEVZTDRHSEg0Q1FOZ3E1NklJUHU1YkpR"
+        },
+        "screenDensityFloat": 2,
+        "timeZone": "Europe/Copenhagen",
+        "browserName": "Firefox",
+        "browserVersion": "146.0",
+        "acceptHeader": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "deviceExperimentId": "ChxOelU0T1RjM09UTXlORFF4TXpnME1ETXhNQT09EJWg0coGGJWg0coG",
+        "rolloutToken": "CJHv_NHKqpvS3wEQxPWe-OnGkAMYmqiymp_mkQM%3D",
+        "screenWidthPoints": 1113,
+        "screenHeightPoints": 854,
+        "utcOffsetMinutes": 60,
+        "userInterfaceTheme": "USER_INTERFACE_THEME_LIGHT",
+        "musicAppInfo": {
+          "pwaInstallabilityStatus": "PWA_INSTALLABILITY_STATUS_UNKNOWN",
+          "webDisplayMode": "WEB_DISPLAY_MODE_BROWSER",
+          "storeDigitalGoodsApiSupportStatus": {
+            "playStoreDigitalGoodsApiSupportStatus": "DIGITAL_GOODS_API_SUPPORT_STATUS_UNSUPPORTED"
+          }
+        }
+      },
+      "user": {
+        "lockedSafetyMode": false
+      },
+      "request": {
+        "useSsl": true,
+        "consistencyTokenJars": [
+          {
+            "encryptedTokenJarContents": "APeVyi8C5VWgwqZ7zmihZLpaFvbEGUymArqR8EaSKiuZDtdeW_I3OxmvTSgt1Esg3nVXSeh9T2IJYM8vmryyjomehXBi7ei-_sNuCcgvWgnUJzpwY2Znkjap4BK9vLqZ_J8-GY_BVTJfy099U-pZTrMT2LyEnqKRuJR7ydOaaiPDpFXnE0vNaDfzxnQMzFH7UvAPeKFg9nZjEwpRL3dV5i7qhJhYvdw"
+          }
+        ],
+        "internalExperimentFlags": [],
+        "innertubeTokenJar": {
+          "appTokens": [
+            {
+              "type": 2,
+              "value": "EicKI1FQSzBxNUdVRTZ1LTg3VV9vWV9UYlR1OXMxX3V0a1pRQUxOEAA=",
+              "maxAgeSeconds": 86400,
+              "creationTimeUsec": "1767133207010242"
+            }
+          ]
+        }
+      },
+      "adSignalsInfo": {
+        "params": [
+          {
+            "key": "dt",
+            "value": "1767133206516"
+          },
+          {
+            "key": "flash",
+            "value": "0"
+          },
+          {
+            "key": "frm",
+            "value": "0"
+          },
+          {
+            "key": "u_tz",
+            "value": "60"
+          },
+          {
+            "key": "u_his",
+            "value": "4"
+          },
+          {
+            "key": "u_h",
+            "value": "540"
+          },
+          {
+            "key": "u_w",
+            "value": "960"
+          },
+          {
+            "key": "u_ah",
+            "value": "540"
+          },
+          {
+            "key": "u_aw",
+            "value": "960"
+          },
+          {
+            "key": "u_cd",
+            "value": "24"
+          },
+          {
+            "key": "bc",
+            "value": "31"
+          },
+          {
+            "key": "bih",
+            "value": "854"
+          },
+          {
+            "key": "biw",
+            "value": "1113"
+          },
+          {
+            "key": "brdim",
+            "value": "0,0,0,0,960,0,1203,1028,1113,854"
+          },
+          {
+            "key": "vis",
+            "value": "1"
+          },
+          {
+            "key": "wgl",
+            "value": "true"
+          },
+          {
+            "key": "ca_type",
+            "value": "image"
+          }
+        ]
+      },
+      "activePlayers": [
+        {
+          "playerContextParams": "Q0FFU0FnZ0I="
+        }
+      ]
+    }
+  }
+}
+
+settings {
+  encodeUrl: false
+}

@@ -180,10 +180,10 @@ func (h *Handler) UIJoinParty(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	userName := r.FormValue("user_name")
 	adminToken := r.FormValue("admin_token")
-	songs := []string{
-		r.FormValue("song1"),
-		r.FormValue("song2"),
-		r.FormValue("song3"),
+	songs := []SongInput{
+		{Title: r.FormValue("song1"), YouTubeID: r.FormValue("song1_id"), ThumbnailURL: r.FormValue("song1_thumb")},
+		{Title: r.FormValue("song2"), YouTubeID: r.FormValue("song2_id"), ThumbnailURL: r.FormValue("song2_thumb")},
+		{Title: r.FormValue("song3"), YouTubeID: r.FormValue("song3_id"), ThumbnailURL: r.FormValue("song3_thumb")},
 	}
 
 	if err := h.service.JoinParty(r.Context(), partyID, userName, songs); err != nil {
@@ -285,8 +285,8 @@ func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Name  string   `json:"name"`
-		Songs []string `json:"songs"`
+		Name  string      `json:"name"`
+		Songs []SongInput `json:"songs"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -299,6 +299,51 @@ func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) SearchSongs(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		json.NewEncoder(w).Encode([]SongInput{})
+		return
+	}
+
+	songs, err := h.service.SearchYouTubeMusic(r.Context(), query)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(songs)
+}
+
+func (h *Handler) SongListPage(w http.ResponseWriter, r *http.Request) {
+	if h.templates == nil {
+		http.Error(w, "templates not loaded", http.StatusInternalServerError)
+		return
+	}
+	partyID := h.getPartyID(r)
+	adminToken := r.URL.Query().Get("admin_token")
+
+	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
+	if !isAdmin {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	partyName, _ := h.service.GetPartyName(r.Context(), partyID)
+	songs, _ := h.service.GetPartySongs(r.Context(), partyID)
+
+	data := map[string]interface{}{
+		"Party": map[string]string{
+			"ID":   partyID,
+			"Name": partyName,
+		},
+		"Songs":      songs,
+		"AdminToken": adminToken,
+	}
+
+	h.templates.ExecuteTemplate(w, "layout", data)
 }
 
 func (h *Handler) StartCompetition(w http.ResponseWriter, r *http.Request) {
