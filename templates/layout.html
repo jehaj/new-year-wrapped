@@ -45,6 +45,31 @@
             border-color: var(--primary);
             color: var(--primary);
         }
+
+        .spoiler {
+            display: block;
+            width: 100%;
+            background-color: #282828;
+            color: transparent;
+            cursor: pointer;
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s, color 0.2s;
+            user-select: none;
+            margin-top: 4px;
+        }
+
+        header>div>div {
+            width: 100%;
+        }
+
+        .spoiler:hover,
+        .spoiler:focus,
+        .spoiler:active {
+            background-color: transparent;
+            color: inherit;
+            user-select: text;
+        }
     </style>
     <meta name="description" content="New Year Wrapped - A Music-Wrapped competition to guess your friends' top songs.">
     <meta name="author" content="Nikolaj J-K">
@@ -516,7 +541,8 @@
                     <img src="{{.ThumbnailURL}}" style="width: 60px; height: 60px; border-radius: 4px;">
                     <div>
                         <strong>{{.Title}}</strong><br>
-                        <small>Owner: {{.OwnerName}}</small>
+                        <small>Owner:</small>
+                        <span class="spoiler" tabindex="0">{{.OwnerName}}</span>
                     </div>
                 </div>
             </header>
