@@ -70,6 +70,16 @@
             color: inherit;
             user-select: text;
         }
+
+        .guess-correct {
+            color: #1db954;
+            font-weight: bold;
+        }
+
+        .guess-incorrect {
+            color: #e91e1e;
+            font-weight: bold;
+        }
     </style>
     <meta name="description" content="New Year Wrapped - A Music-Wrapped competition to guess your friends' top songs.">
     <meta name="author" content="Nikolaj J-K">
@@ -410,45 +420,56 @@
     {{if .GameOver}}
     <article class="card">
         <header>🏆 Game Over!</header>
-        <p>All songs have been guessed and revealed. Check the final leaderboard below!</p>
+        <p>All songs have been guessed and revealed. Check your performance and the final leaderboard below!</p>
+    </article>
+
+    <article class="card">
+        <header>Your Guesses</header>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Song</th>
+                        <th>Your Guess</th>
+                        <th>Actual Owner(s)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .PreviousResults}}
+                    {{$guess := index $.UserGuesses .ID}}
+                    <tr>
+                        <td>{{.Title}}</td>
+                        <td class="{{if .IsCorrect $guess}}guess-correct{{else if $guess}}guess-incorrect{{end}}">
+                            {{if $guess}}{{$guess}}{{else}}<em>No guess</em>{{end}}
+                        </td>
+                        <td>{{.OwnerName}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
     </article>
     {{else}}
     <h3>Round {{.CurrentRound}} {{if .ShowResults}}- Results{{else}}- Guessing{{end}}</h3>
 
     {{if not .ShowResults}}
-    <div id="songs-to-guess">
-        {{range .Songs}}
-        <article class="card">
-            <header>🎵 {{.Title}}</header>
-            <form action="/ui/parties/{{$.Party.ID}}/guess" method="POST">
-                <input type="hidden" name="user_name" value="{{$.UserName}}">
-                <input type="hidden" name="admin_token" value="{{$.AdminToken}}">
-                <input type="hidden" name="song_id" value="{{.ID}}">
-                {{$guessedOwner := index $.UserGuesses .ID}}
-                <div class="grid">
-                    <select name="owner_name" required {{if $guessedOwner}}disabled{{end}}>
-                        <option value="">Who's song is this?</option>
-                        {{range $.Users}}
-                        <option value="{{.Name}}" {{if eq .Name $guessedOwner}}selected{{end}}>{{.Name}}</option>
-                        {{end}}
-                    </select>
-                    <button type="submit" {{if $guessedOwner}}disabled{{end}}>
-                        {{if $guessedOwner}}You have already guessed{{else}}Guess{{end}}
-                    </button>
-                </div>
-            </form>
-        </article>
-        {{else}}
-        <p>No more songs this round!</p>
-        {{end}}
-    </div>
+    <!-- ...existing code... -->
     {{else}}
     <div id="round-results">
         <article class="card">
             <header>Round {{.CurrentRound}} Reveals</header>
             <ul>
                 {{range .PreviousResults}}
-                <li><strong>{{.Title}}</strong> was by <strong>{{.OwnerName}}</strong></li>
+                {{$guess := index $.UserGuesses .ID}}
+                <li>
+                    <strong>{{.Title}}</strong> was by <strong>{{.OwnerName}}</strong>
+                    {{if $guess}}
+                    <br><small>Your guess: <span
+                            class="{{if .IsCorrect $guess}}guess-correct{{else}}guess-incorrect{{end}}">{{$guess}}</span></small>
+                    {{else}}
+                    <br><small><em>You didn't guess for this song.</em></small>
+                    {{end}}
+                </li>
                 {{end}}
             </ul>
         </article>

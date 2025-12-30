@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/raitonoberu/ytmusic"
@@ -328,6 +329,19 @@ type SongResult struct {
 	YouTubeID    string `json:"youtube_id"`
 	ThumbnailURL string `json:"thumbnail_url"`
 	OwnerName    string `json:"owner_name"`
+}
+
+func (r SongResult) IsCorrect(guess string) bool {
+	if guess == "" {
+		return false
+	}
+	owners := strings.Split(r.OwnerName, ", ")
+	for _, o := range owners {
+		if o == guess {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Service) SearchYouTubeMusic(ctx context.Context, query string) ([]SongInput, error) {

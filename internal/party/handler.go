@@ -127,6 +127,8 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 	gameOver := false
 	if !showResults && len(songs) == 0 {
 		gameOver = true
+		// Fetch all songs for the final reveal
+		previousResults, _ = h.service.GetPartySongs(r.Context(), partyID)
 	}
 
 	data := map[string]interface{}{
