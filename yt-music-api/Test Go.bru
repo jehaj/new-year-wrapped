@@ -5,15 +5,16 @@ meta {
 }
 
 get {
-  url: http://localhost:8080/parties/O0KX7B?admin_token=I0XDZEYRBLT1
+  url: http://localhost:8080/api/search?q=adele
   body: none
   auth: inherit
 }
 
 params:query {
-  admin_token: I0XDZEYRBLT1
+  q: adele
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }
