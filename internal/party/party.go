@@ -1,15 +1,14 @@
 package party
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
-	"net/http"
 	"time"
+
+	"github.com/raitonoberu/ytmusic"
 )
 
 type SongInput struct {
@@ -332,133 +331,34 @@ type SongResult struct {
 }
 
 func (s *Service) SearchYouTubeMusic(ctx context.Context, query string) ([]SongInput, error) {
-	url := "https://music.youtube.com/youtubei/v1/music/get_search_suggestions?prettyPrint=false"
-
-	body := map[string]interface{}{
-		"input": query,
-		"context": map[string]interface{}{
-			"client": map[string]interface{}{
-				"clientName":       "WEB_REMIX",
-				"clientVersion":    "1.20251215.03.00",
-				"hl":               "en",
-				"gl":               "US",
-				"utcOffsetMinutes": 0,
-			},
-			"user": map[string]interface{}{
-				"lockedSafetyMode": false,
-			},
-		},
-	}
-
-	jsonBody, _ := json.Marshal(body)
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
+	search := ytmusic.TrackSearch(query)
+	result, err := search.Next()
 	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0")
-	req.Header.Set("Origin", "https://music.youtube.com")
-	req.Header.Set("Referer", "https://music.youtube.com/")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var result struct {
-		Contents []struct {
-			SearchSuggestionsSectionRenderer struct {
-				Contents []struct {
-					MusicResponsiveListItemRenderer struct {
-						Thumbnail struct {
-							MusicThumbnailRenderer struct {
-								Thumbnail struct {
-									Thumbnails []struct {
-										URL string `json:"url"`
-									} `json:"thumbnails"`
-								} `json:"thumbnail"`
-							} `json:"musicThumbnailRenderer"`
-						} `json:"thumbnail"`
-						FlexColumns []struct {
-							MusicResponsiveListItemFlexColumnRenderer struct {
-								Text struct {
-									Runs []struct {
-										Text string `json:"text"`
-									} `json:"runs"`
-								} `json:"text"`
-							} `json:"musicResponsiveListItemFlexColumnRenderer"`
-						} `json:"flexColumns"`
-						NavigationEndpoint struct {
-							WatchEndpoint struct {
-								VideoID string `json:"videoId"`
-							} `json:"watchEndpoint"`
-						} `json:"navigationEndpoint"`
-						PlaylistItemData struct {
-							VideoID string `json:"videoId"`
-						} `json:"playlistItemData"`
-					} `json:"musicResponsiveListItemRenderer"`
-				} `json:"contents"`
-			} `json:"searchSuggestionsSectionRenderer"`
-		} `json:"contents"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err
 	}
 
 	var songs []SongInput
-	for _, section := range result.Contents {
-		for _, item := range section.SearchSuggestionsSectionRenderer.Contents {
-			renderer := item.MusicResponsiveListItemRenderer
-
-			// Prefer videoId from playlistItemData or navigationEndpoint
-			videoID := renderer.PlaylistItemData.VideoID
-			if videoID == "" {
-				videoID = renderer.NavigationEndpoint.WatchEndpoint.VideoID
-			}
-
-			if videoID == "" {
-				continue
-			}
-
-			title := ""
-			artist := ""
-			if len(renderer.FlexColumns) > 0 && len(renderer.FlexColumns[0].MusicResponsiveListItemFlexColumnRenderer.Text.Runs) > 0 {
-				title = renderer.FlexColumns[0].MusicResponsiveListItemFlexColumnRenderer.Text.Runs[0].Text
-			}
-			if len(renderer.FlexColumns) > 1 && len(renderer.FlexColumns[1].MusicResponsiveListItemFlexColumnRenderer.Text.Runs) > 0 {
-				// The second column usually contains "Song • Artist • Views"
-				artistParts := []string{}
-				for _, run := range renderer.FlexColumns[1].MusicResponsiveListItemFlexColumnRenderer.Text.Runs {
-					if run.Text != " • " && run.Text != "Sang" && run.Text != "Song" {
-						artistParts = append(artistParts, run.Text)
-					}
-				}
-				if len(artistParts) > 0 {
-					artist = artistParts[0]
-				}
-			}
-
-			fullTitle := title
-			if artist != "" {
-				fullTitle = fmt.Sprintf("%s - %s", title, artist)
-			}
-
-			thumbnailURL := ""
-			if len(renderer.Thumbnail.MusicThumbnailRenderer.Thumbnail.Thumbnails) > 0 {
-				// Get the highest resolution thumbnail available in the list
-				thumbnailURL = renderer.Thumbnail.MusicThumbnailRenderer.Thumbnail.Thumbnails[len(renderer.Thumbnail.MusicThumbnailRenderer.Thumbnail.Thumbnails)-1].URL
-			}
-
-			songs = append(songs, SongInput{
-				Title:        fullTitle,
-				YouTubeID:    videoID,
-				ThumbnailURL: thumbnailURL,
-			})
+	for _, track := range result.Tracks {
+		artist := ""
+		if len(track.Artists) > 0 {
+			artist = track.Artists[0].Name
 		}
+
+		fullTitle := track.Title
+		if artist != "" {
+			fullTitle = fmt.Sprintf("%s - %s", track.Title, artist)
+		}
+
+		thumbnailURL := ""
+		if len(track.Thumbnails) > 0 {
+			thumbnailURL = track.Thumbnails[len(track.Thumbnails)-1].URL
+		}
+
+		songs = append(songs, SongInput{
+			Title:        fullTitle,
+			YouTubeID:    track.VideoID,
+			ThumbnailURL: thumbnailURL,
+		})
 	}
 
 	return songs, nil
