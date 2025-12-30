@@ -361,6 +361,7 @@ func (h *Handler) SongListPage(w http.ResponseWriter, r *http.Request) {
 	}
 	partyID := h.getPartyID(r)
 	adminToken := r.URL.Query().Get("admin_token")
+	userName := r.URL.Query().Get("user")
 
 	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
 	if !isAdmin {
@@ -378,6 +379,8 @@ func (h *Handler) SongListPage(w http.ResponseWriter, r *http.Request) {
 		},
 		"Songs":      songs,
 		"AdminToken": adminToken,
+		"UserName":   userName,
+		"IsSongList": true,
 	}
 
 	h.templates.ExecuteTemplate(w, "layout", data)

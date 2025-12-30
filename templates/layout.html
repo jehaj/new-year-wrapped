@@ -62,7 +62,7 @@
     <main class="container">
         {{if not .Party}}
         {{template "index" .}}
-        {{else if .Songs}}
+        {{else if .IsSongList}}
         {{template "song_list" .}}
         {{else if .Started}}
         {{template "game" .}}
@@ -220,6 +220,14 @@
 <section id="party-room">
     <p>Party ID: <code>{{.Party.ID}}</code></p>
 
+    {{if .IsAdmin}}
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <img src="/parties/{{.Party.ID}}/qrcode" alt="Join QR Code"
+            style="max-width: 200px; border: 10px solid white; border-radius: 10px;">
+        <p><small>Share this QR code with your friends!</small></p>
+    </div>
+    {{end}}
+
     {{if not .UserJoined}}
     <div id="join-section">
         <h3>Join the Party</h3>
@@ -342,18 +350,15 @@
         </ul>
         <div class="grid">
             {{if .IsAdmin}}
-            <div style="text-align: center; margin-bottom: 2rem;">
-                <img src="/parties/{{.Party.ID}}/qrcode" alt="Join QR Code"
-                    style="max-width: 200px; border: 10px solid white; border-radius: 10px;">
-                <p><small>Share this QR code with your friends!</small></p>
-            </div>
             <form action="/ui/parties/{{.Party.ID}}/start" method="POST">
                 <input type="hidden" name="admin_token" value="{{.AdminToken}}">
                 <input type="hidden" name="user_name" value="{{.UserName}}">
                 <button type="submit">Start Competition</button>
             </form>
-            <a href="/parties/{{.Party.ID}}/song_list?admin_token={{.AdminToken}}" role="button" class="secondary">View
-                Song List</a>
+            <div>
+                <a href="/parties/{{.Party.ID}}/song_list?admin_token={{.AdminToken}}&user={{.UserName}}" role="button"
+                    class="secondary" style="width: 100%;">View Song List</a>
+            </div>
             {{else}}
             <p>Waiting for admin to start...</p>
             {{end}}
@@ -473,8 +478,10 @@
                 {{if .ShowResults}}Next Round{{else}}Reveal Results{{end}}
             </button>
         </form>
-        <a href="/parties/{{.Party.ID}}/song_list?admin_token={{.AdminToken}}" role="button" class="secondary">View Song
-            List</a>
+        <div>
+            <a href="/parties/{{.Party.ID}}/song_list?admin_token={{.AdminToken}}&user={{.UserName}}" role="button"
+                class="secondary" style="width: 100%;">View Song List</a>
+        </div>
         {{end}}
 
         <form action="/parties/{{.Party.ID}}/game" method="GET">
@@ -493,9 +500,9 @@
         <p>Admin view of all songs in the party.</p>
     </header>
 
-    <div class="grid">
+    <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
         {{range .Songs}}
-        <article class="card">
+        <article class="card" style="flex: 1 1 calc(33.333% - 1rem); min-width: 300px; margin-bottom: 0;">
             <header>
                 <div style="display: flex; align-items: center; gap: 1rem;">
                     <img src="{{.ThumbnailURL}}" style="width: 60px; height: 60px; border-radius: 4px;">
@@ -516,7 +523,7 @@
     </div>
 
     <div style="margin-top: 2rem;">
-        <a href="/parties/{{.Party.ID}}/game?admin_token={{.AdminToken}}" role="button">Back to Game</a>
+        <a href="/parties/{{.Party.ID}}?admin_token={{.AdminToken}}&user={{.UserName}}" role="button">Back to Party</a>
     </div>
 </section>
 {{end}}
