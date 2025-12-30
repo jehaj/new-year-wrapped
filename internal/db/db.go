@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS parties (
 	admin_token TEXT NOT NULL,
 	started BOOLEAN DEFAULT FALSE,
 	current_round INTEGER DEFAULT 0,
+	show_results BOOLEAN DEFAULT FALSE,
 	songs_per_round INTEGER DEFAULT 5
 );
 

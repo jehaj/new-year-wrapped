@@ -215,8 +215,8 @@ func (s *Service) GetUserGuesses(ctx context.Context, partyID string, userName s
 	return guesses, nil
 }
 
-func (s *Service) GetPartyState(ctx context.Context, partyID string) (started bool, currentRound int, err error) {
-	err = s.db.QueryRowContext(ctx, "SELECT started, current_round FROM parties WHERE id = ?", partyID).Scan(&started, &currentRound)
+func (s *Service) GetPartyState(ctx context.Context, partyID string) (started bool, currentRound int, showResults bool, err error) {
+	err = s.db.QueryRowContext(ctx, "SELECT started, current_round, show_results FROM parties WHERE id = ?", partyID).Scan(&started, &currentRound, &showResults)
 	return
 }
 
@@ -254,7 +254,7 @@ func (s *Service) GetLeaderboard(ctx context.Context, partyID string, round int)
 		args = []interface{}{round, round, partyID}
 	} else {
 		query = `
-			SELECT u.name, COUNT(CASE WHEN g.guessed_user_id = s.user_id AND s.shuffle_index < (p.current_round - 1) * p.songs_per_round THEN 1 END) as score
+			SELECT u.name, COUNT(CASE WHEN g.guessed_user_id = s.user_id AND s.shuffle_index < CASE WHEN p.show_results THEN p.current_round * p.songs_per_round ELSE (p.current_round - 1) * p.songs_per_round END THEN 1 END) as score
 			FROM users u
 			JOIN parties p ON u.party_id = p.id
 			LEFT JOIN guesses g ON u.id = g.guesser_id
@@ -283,8 +283,19 @@ func (s *Service) GetLeaderboard(ctx context.Context, partyID string, round int)
 }
 
 func (s *Service) NextRound(ctx context.Context, partyID string) error {
-	s.log(partyID, "Moving to next round")
-	_, err := s.db.ExecContext(ctx, "UPDATE parties SET current_round = current_round + 1 WHERE id = ?", partyID)
+	var showResults bool
+	err := s.db.QueryRowContext(ctx, "SELECT show_results FROM parties WHERE id = ?", partyID).Scan(&showResults)
+	if err != nil {
+		return err
+	}
+
+	if showResults {
+		s.log(partyID, "Moving to next round")
+		_, err = s.db.ExecContext(ctx, "UPDATE parties SET current_round = current_round + 1, show_results = FALSE WHERE id = ?", partyID)
+	} else {
+		s.log(partyID, "Revealing round results")
+		_, err = s.db.ExecContext(ctx, "UPDATE parties SET show_results = TRUE WHERE id = ?", partyID)
+	}
 	return err
 }
 
@@ -299,6 +310,16 @@ type SongResult struct {
 	ID        int    `json:"id"`
 	Title     string `json:"title"`
 	OwnerName string `json:"owner_name"`
+}
+
+func (s *Service) GetTotalSongs(ctx context.Context, partyID string) (int, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) 
+		FROM songs 
+		JOIN users ON songs.user_id = users.id 
+		WHERE users.party_id = ?`, partyID).Scan(&count)
+	return count, err
 }
 
 // GetUsers returns all participants in a party.
@@ -326,12 +347,13 @@ func (s *Service) GetRoundResults(ctx context.Context, partyID string, round int
 	s.log(partyID, "Fetching results for round %d", round)
 	var currentRound int
 	var songsPerRound int
-	err := s.db.QueryRowContext(ctx, "SELECT current_round, songs_per_round FROM parties WHERE id = ?", partyID).Scan(&currentRound, &songsPerRound)
+	var showResults bool
+	err := s.db.QueryRowContext(ctx, "SELECT current_round, songs_per_round, show_results FROM parties WHERE id = ?", partyID).Scan(&currentRound, &songsPerRound, &showResults)
 	if err != nil {
 		return nil, err
 	}
 
-	if currentRound <= round {
+	if currentRound < round || (currentRound == round && !showResults) {
 		return nil, fmt.Errorf("round %d has not been revealed yet", round)
 	}
 

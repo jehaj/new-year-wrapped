@@ -142,8 +142,15 @@
 
 {{define "game"}}
 <section id="game-room">
-    <h3>Round {{.CurrentRound}}</h3>
+    {{if .GameOver}}
+    <article class="card">
+        <header>🏆 Game Over!</header>
+        <p>All songs have been guessed and revealed. Check the final leaderboard below!</p>
+    </article>
+    {{else}}
+    <h3>Round {{.CurrentRound}} {{if .ShowResults}}- Results{{else}}- Guessing{{end}}</h3>
 
+    {{if not .ShowResults}}
     <div id="songs-to-guess">
         {{range .Songs}}
         <article class="card">
@@ -170,22 +177,25 @@
         <p>No more songs this round!</p>
         {{end}}
     </div>
-
-    {{if .PreviousResults}}
-    <div id="round-results" style="margin-top: 2rem;">
-        <h3>Previous Round Results</h3>
-        <ul>
-            {{range .PreviousResults}}
-            <li><strong>{{.SongTitle}}</strong> was by <strong>{{.OwnerName}}</strong></li>
-            {{end}}
-        </ul>
+    {{else}}
+    <div id="round-results">
+        <article class="card">
+            <header>Round {{.CurrentRound}} Reveals</header>
+            <ul>
+                {{range .PreviousResults}}
+                <li><strong>{{.Title}}</strong> was by <strong>{{.OwnerName}}</strong></li>
+                {{end}}
+            </ul>
+        </article>
     </div>
+    {{end}}
     {{end}}
 
     <div id="leaderboard-section" style="margin-top: 2rem;">
         <div class="grid">
+            {{if not .GameOver}}
             <div>
-                <h3>Round Results</h3>
+                <h3>{{if .ShowResults}}Round {{.CurrentRound}} Results{{else}}Previous Round Results{{end}}</h3>
                 <table>
                     <thead>
                         <tr>
@@ -203,8 +213,9 @@
                     </tbody>
                 </table>
             </div>
+            {{end}}
             <div>
-                <h3>Global Leaderboard</h3>
+                <h3>{{if .GameOver}}Final Leaderboard{{else}}Global Leaderboard{{end}}</h3>
                 <table>
                     <thead>
                         <tr>
@@ -226,11 +237,13 @@
     </div>
 
     <div class="grid">
-        {{if .IsAdmin}}
+        {{if and .IsAdmin (not .GameOver)}}
         <form action="/ui/parties/{{.Party.ID}}/next" method="POST">
             <input type="hidden" name="admin_token" value="{{.AdminToken}}">
             <input type="hidden" name="user_name" value="{{.UserName}}">
-            <button type="submit">Next Round</button>
+            <button type="submit">
+                {{if .ShowResults}}Next Round{{else}}Reveal Results{{end}}
+            </button>
         </form>
         {{end}}
 

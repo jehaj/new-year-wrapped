@@ -49,7 +49,7 @@ func (h *Handler) PartyPage(w http.ResponseWriter, r *http.Request) {
 	userName := r.URL.Query().Get("user")
 	adminToken := r.URL.Query().Get("admin_token")
 
-	started, _, err := h.service.GetPartyState(r.Context(), partyID)
+	started, _, _, err := h.service.GetPartyState(r.Context(), partyID)
 	if err != nil {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -87,7 +87,7 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 	userName := r.URL.Query().Get("user")
 	adminToken := r.URL.Query().Get("admin_token")
 
-	started, currentRound, err := h.service.GetPartyState(r.Context(), partyID)
+	started, currentRound, showResults, err := h.service.GetPartyState(r.Context(), partyID)
 	if err != nil {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -99,15 +99,30 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 
 	partyName, _ := h.service.GetPartyName(r.Context(), partyID)
 	songs, _ := h.service.GetRoundSongs(r.Context(), partyID, currentRound)
+	totalSongs, _ := h.service.GetTotalSongs(r.Context(), partyID)
 	users, _ := h.service.GetUsers(r.Context(), partyID)
-	leaderboard, _ := h.service.GetLeaderboard(r.Context(), partyID, currentRound-1)
+
+	var leaderboard []LeaderboardEntry
+	var previousResults []SongResult
+
+	if showResults {
+		leaderboard, _ = h.service.GetLeaderboard(r.Context(), partyID, currentRound)
+		previousResults, _ = h.service.GetRoundResults(r.Context(), partyID, currentRound)
+	} else {
+		leaderboard, _ = h.service.GetLeaderboard(r.Context(), partyID, currentRound-1)
+		if currentRound > 1 {
+			previousResults, _ = h.service.GetRoundResults(r.Context(), partyID, currentRound-1)
+		}
+	}
+
 	globalLeaderboard, _ := h.service.GetLeaderboard(r.Context(), partyID, 0)
 	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
 	userGuesses, _ := h.service.GetUserGuesses(r.Context(), partyID, userName)
 
-	var previousResults []SongResult
-	if currentRound > 1 {
-		previousResults, _ = h.service.GetRoundResults(r.Context(), partyID, currentRound-1)
+	// Check if game is over
+	gameOver := false
+	if !showResults && len(songs) == 0 {
+		gameOver = true
 	}
 
 	data := map[string]interface{}{
@@ -117,7 +132,10 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 		},
 		"Started":           true,
 		"CurrentRound":      currentRound,
+		"ShowResults":       showResults,
+		"GameOver":          gameOver,
 		"Songs":             songs,
+		"TotalSongs":        totalSongs,
 		"Users":             users,
 		"UserName":          userName,
 		"AdminToken":        adminToken,
@@ -305,7 +323,7 @@ func (h *Handler) GetCurrentRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	started, currentRound, err := h.service.GetPartyState(r.Context(), partyID)
+	started, currentRound, _, err := h.service.GetPartyState(r.Context(), partyID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
