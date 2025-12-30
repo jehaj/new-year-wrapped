@@ -464,7 +464,7 @@ func (s *Service) GetPartySongs(ctx context.Context, partyID string) ([]SongResu
 		FROM songs s
 		JOIN users u ON s.user_id = u.id
 		WHERE u.party_id = ?
-		ORDER BY u.name ASC, s.id ASC`, partyID)
+		ORDER BY s.shuffle_index ASC, u.name ASC, s.id ASC`, partyID)
 	if err != nil {
 		return nil, err
 	}
