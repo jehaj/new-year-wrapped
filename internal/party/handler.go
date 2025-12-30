@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/yeqown/go-qrcode/v2"
+	"github.com/yeqown/go-qrcode/writer/standard"
 )
 
 type Handler struct {
@@ -316,6 +320,39 @@ func (h *Handler) SearchSongs(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(songs)
 }
+
+func (h *Handler) QRCode(w http.ResponseWriter, r *http.Request) {
+	partyID := h.getPartyID(r)
+	if partyID == "" {
+		http.Error(w, "Missing party ID", http.StatusBadRequest)
+		return
+	}
+
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	joinURL := fmt.Sprintf("%s://%s/parties/%s", scheme, r.Host, partyID)
+
+	qrc, err := qrcode.New(joinURL)
+	if err != nil {
+		http.Error(w, "Failed to generate QR code", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/png")
+	wr := standard.NewWithWriter(nopCloser{w})
+
+	if err := qrc.Save(wr); err != nil {
+		return
+	}
+}
+
+type nopCloser struct {
+	io.Writer
+}
+
+func (nopCloser) Close() error { return nil }
 
 func (h *Handler) SongListPage(w http.ResponseWriter, r *http.Request) {
 	if h.templates == nil {

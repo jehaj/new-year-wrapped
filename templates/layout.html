@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>New Year Wrapped</title>
     <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <style>
         :root {
             --primary: #1db954;
@@ -71,7 +72,7 @@
     </main>
 
     <footer class="container"
-        style="text-align: center; margin-top: 4rem; padding: 2rem 0; border-top: 1px solid #282828; opacity: 0.7;">
+        style="text-align: center; margin-top: 1rem; padding: 2rem 0; border-top: 1px solid #282828; opacity: 0.7;">
         <small>
             New Year Wrapped 2025 &bull;
             <a href="https://github.com/jehaj/new-year-wrapped" target="_blank" class="secondary">GitHub</a> &bull;
@@ -341,6 +342,11 @@
         </ul>
         <div class="grid">
             {{if .IsAdmin}}
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <img src="/parties/{{.Party.ID}}/qrcode" alt="Join QR Code"
+                    style="max-width: 200px; border: 10px solid white; border-radius: 10px;">
+                <p><small>Share this QR code with your friends!</small></p>
+            </div>
             <form action="/ui/parties/{{.Party.ID}}/start" method="POST">
                 <input type="hidden" name="admin_token" value="{{.AdminToken}}">
                 <input type="hidden" name="user_name" value="{{.UserName}}">

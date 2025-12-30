@@ -48,6 +48,7 @@ func main() {
 	mux.HandleFunc("GET /parties/{id}", partyHandler.PartyPage)
 	mux.HandleFunc("GET /parties/{id}/game", partyHandler.GamePage)
 	mux.HandleFunc("GET /parties/{id}/song_list", partyHandler.SongListPage)
+	mux.HandleFunc("GET /parties/{id}/qrcode", partyHandler.QRCode)
 
 	// UI Action Routes
 	mux.HandleFunc("POST /ui/parties/create", partyHandler.UICreateParty)
@@ -60,7 +61,7 @@ func main() {
 	fs := http.FileServer(http.Dir("static"))
 	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
 
-	addr := "localhost:8080"
+	addr := "0.0.0.0:8080"
 	log.Println("Server starting on http://" + addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
