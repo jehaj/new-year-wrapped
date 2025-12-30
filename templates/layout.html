@@ -71,45 +71,62 @@
     </main>
 
     <script>
-        async function searchSongs(input, resultsId, songNum) {
+        let searchTimeout;
+        async function searchSongs(input, resultsId, songNum, immediate = false) {
             const query = input.value;
             const resultsDiv = document.getElementById(resultsId);
-            if (query.length < 3) {
+            if (query.length < 2) {
                 resultsDiv.innerHTML = '';
                 return;
             }
 
-            try {
-                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-                const songs = await response.json();
+            const doSearch = async () => {
+                try {
+                    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                    const songs = await response.json();
 
-                resultsDiv.innerHTML = '';
-                songs.forEach(song => {
-                    const div = document.createElement('div');
-                    div.className = 'search-result';
-                    div.style.padding = '0.5rem';
-                    div.style.cursor = 'pointer';
-                    div.style.borderBottom = '1px solid #282828';
-                    div.innerHTML = `
-                        <div style="display: flex; align-items: center; gap: 1rem;">
-                            <img data-src="${song.thumbnail_url}" class="lazy-thumb" style="width: 40px; height: 40px; border-radius: 4px; background: #282828;">
-                            <span>${song.title}</span>
-                        </div>
-                    `;
-                    div.onclick = () => {
-                        input.value = song.title;
-                        document.getElementById(`song${songNum}_id`).value = song.youtube_id;
-                        document.getElementById(`song${songNum}_thumb`).value = song.thumbnail_url;
-                        resultsDiv.innerHTML = '';
-                    };
-                    resultsDiv.appendChild(div);
-                });
+                    resultsDiv.innerHTML = '';
+                    songs.forEach(song => {
+                        const div = document.createElement('div');
+                        div.className = 'search-result';
+                        div.innerHTML = `
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <img data-src="${song.thumbnail_url}" class="lazy-thumb">
+                                <div class="song-info">
+                                    <div class="song-title">${song.title}</div>
+                                </div>
+                            </div>
+                        `;
+                        div.onclick = (e) => {
+                            e.stopPropagation();
+                            input.value = song.title;
+                            document.getElementById(`song${songNum}_id`).value = song.youtube_id;
+                            document.getElementById(`song${songNum}_thumb`).value = song.thumbnail_url;
+                            resultsDiv.innerHTML = '';
+                        };
+                        resultsDiv.appendChild(div);
+                    });
 
-                loadImagesLazy();
-            } catch (err) {
-                console.error('Search failed', err);
+                    loadImagesLazy();
+                } catch (err) {
+                    console.error('Search failed', err);
+                }
+            };
+
+            clearTimeout(searchTimeout);
+            if (immediate) {
+                doSearch();
+            } else {
+                searchTimeout = setTimeout(doSearch, 400);
             }
         }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.search-results-container').forEach(div => {
+                div.innerHTML = '';
+            });
+        });
 
         let imageQueue = [];
         let isProcessingQueue = false;
@@ -203,21 +220,24 @@
                 <legend>Your Top 3 Songs</legend>
                 <div class="song-input-group">
                     <input type="text" name="song1" id="song1" placeholder="Search Song 1..." required
-                        oninput="searchSongs(this, 'results1', 1)" autocomplete="off">
+                        oninput="searchSongs(this, 'results1', 1)"
+                        onclick="event.stopPropagation(); searchSongs(this, 'results1', 1, true)" autocomplete="off">
                     <input type="hidden" name="song1_id" id="song1_id">
                     <input type="hidden" name="song1_thumb" id="song1_thumb">
                     <div id="results1" class="search-results-container"></div>
                 </div>
                 <div class="song-input-group">
                     <input type="text" name="song2" id="song2" placeholder="Search Song 2..." required
-                        oninput="searchSongs(this, 'results2', 2)" autocomplete="off">
+                        oninput="searchSongs(this, 'results2', 2)"
+                        onclick="event.stopPropagation(); searchSongs(this, 'results2', 2, true)" autocomplete="off">
                     <input type="hidden" name="song2_id" id="song2_id">
                     <input type="hidden" name="song2_thumb" id="song2_thumb">
                     <div id="results2" class="search-results-container"></div>
                 </div>
                 <div class="song-input-group">
                     <input type="text" name="song3" id="song3" placeholder="Search Song 3..." required
-                        oninput="searchSongs(this, 'results3', 3)" autocomplete="off">
+                        oninput="searchSongs(this, 'results3', 3)"
+                        onclick="event.stopPropagation(); searchSongs(this, 'results3', 3, true)" autocomplete="off">
                     <input type="hidden" name="song3_id" id="song3_id">
                     <input type="hidden" name="song3_thumb" id="song3_thumb">
                     <div id="results3" class="search-results-container"></div>
@@ -241,7 +261,11 @@
     <style>
         .song-input-group {
             position: relative;
-            margin-bottom: 1rem;
+            margin-bottom: var(--pico-spacing);
+        }
+
+        .song-input-group input {
+            margin-bottom: 0;
         }
 
         .search-results-container {
@@ -251,14 +275,53 @@
             right: 0;
             background: #181818;
             border: 1px solid #282828;
+            border-top: none;
             z-index: 100;
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
             border-radius: 0 0 0.5rem 0.5rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+            display: none;
+        }
+
+        .search-results-container:not(:empty) {
+            display: block;
+        }
+
+        .search-result {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid #282828;
+            transition: background 0.2s;
+        }
+
+        .search-result:last-child {
+            border-bottom: none;
         }
 
         .search-result:hover {
             background: #282828;
+        }
+
+        .search-result img {
+            width: 48px;
+            height: 48px;
+            border-radius: 4px;
+            object-fit: cover;
+            background: #282828;
+        }
+
+        .search-result .song-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .search-result .song-title {
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
     </style>
     {{else}}
