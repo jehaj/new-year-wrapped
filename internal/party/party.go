@@ -254,7 +254,10 @@ func (s *Service) GetLeaderboard(ctx context.Context, partyID string, round int)
 
 	if round > 0 {
 		query = `
-			SELECT u.name, COUNT(CASE WHEN g.guessed_user_id = s.user_id AND s.shuffle_index BETWEEN (? - 1) * p.songs_per_round AND ? * p.songs_per_round - 1 THEN 1 END) as score
+			SELECT u.name, COUNT(CASE WHEN (
+				(s.youtube_id != '' AND EXISTS (SELECT 1 FROM songs s2 WHERE s2.youtube_id = s.youtube_id AND s2.user_id = g.guessed_user_id)) OR
+				(s.youtube_id = '' AND g.guessed_user_id = s.user_id)
+			) AND s.shuffle_index BETWEEN (? - 1) * p.songs_per_round AND ? * p.songs_per_round - 1 THEN 1 END) as score
 			FROM users u
 			JOIN parties p ON u.party_id = p.id
 			LEFT JOIN guesses g ON u.id = g.guesser_id
@@ -265,7 +268,10 @@ func (s *Service) GetLeaderboard(ctx context.Context, partyID string, round int)
 		args = []interface{}{round, round, partyID}
 	} else {
 		query = `
-			SELECT u.name, COUNT(CASE WHEN g.guessed_user_id = s.user_id AND s.shuffle_index < CASE WHEN p.show_results THEN p.current_round * p.songs_per_round ELSE (p.current_round - 1) * p.songs_per_round END THEN 1 END) as score
+			SELECT u.name, COUNT(CASE WHEN (
+				(s.youtube_id != '' AND EXISTS (SELECT 1 FROM songs s2 WHERE s2.youtube_id = s.youtube_id AND s2.user_id = g.guessed_user_id)) OR
+				(s.youtube_id = '' AND g.guessed_user_id = s.user_id)
+			) AND s.shuffle_index < CASE WHEN p.show_results THEN p.current_round * p.songs_per_round ELSE (p.current_round - 1) * p.songs_per_round END THEN 1 END) as score
 			FROM users u
 			JOIN parties p ON u.party_id = p.id
 			LEFT JOIN guesses g ON u.id = g.guesser_id
@@ -460,11 +466,19 @@ func (s *Service) SearchYouTubeMusic(ctx context.Context, query string) ([]SongI
 
 func (s *Service) GetPartySongs(ctx context.Context, partyID string) ([]SongResult, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT s.id, s.title, s.youtube_id, s.thumbnail_url, u.name
+		SELECT s.id, s.title, s.youtube_id, s.thumbnail_url, (
+			SELECT GROUP_CONCAT(u2.name, ', ')
+			FROM songs s2
+			JOIN users u2 ON s2.user_id = u2.id
+			WHERE u2.party_id = ? AND (
+				(s.youtube_id != '' AND s2.youtube_id = s.youtube_id) OR
+				(s.youtube_id = '' AND s2.id = s.id)
+			)
+		) as owner_names
 		FROM songs s
 		JOIN users u ON s.user_id = u.id
 		WHERE u.party_id = ?
-		ORDER BY s.shuffle_index ASC, u.name ASC, s.id ASC`, partyID)
+		ORDER BY s.shuffle_index ASC, u.name ASC, s.id ASC`, partyID, partyID)
 	if err != nil {
 		return nil, err
 	}
@@ -520,11 +534,19 @@ func (s *Service) GetRoundResults(ctx context.Context, partyID string, round int
 	endIndex := round*songsPerRound - 1
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT s.id, s.title, s.youtube_id, s.thumbnail_url, u.name
+		SELECT s.id, s.title, s.youtube_id, s.thumbnail_url, (
+			SELECT GROUP_CONCAT(u2.name, ', ')
+			FROM songs s2
+			JOIN users u2 ON s2.user_id = u2.id
+			WHERE u2.party_id = ? AND (
+				(s.youtube_id != '' AND s2.youtube_id = s.youtube_id) OR
+				(s.youtube_id = '' AND s2.id = s.id)
+			)
+		) as owner_names
 		FROM songs s
 		JOIN users u ON s.user_id = u.id
 		WHERE u.party_id = ? AND s.shuffle_index BETWEEN ? AND ?
-		ORDER BY s.shuffle_index ASC`, partyID, startIndex, endIndex)
+		ORDER BY s.shuffle_index ASC`, partyID, partyID, startIndex, endIndex)
 	if err != nil {
 		return nil, err
 	}

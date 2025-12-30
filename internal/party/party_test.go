@@ -183,7 +183,7 @@ func TestGuessingAndLeaderboard(t *testing.T) {
 	// Alice owns Song 1
 	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
 	aliceID, _ := res.LastInsertId()
-	res, _ = database.Exec("INSERT INTO songs (user_id, title, shuffle_index) VALUES (?, ?, 0)", aliceID, "Song 1")
+	res, _ = database.Exec("INSERT INTO songs (user_id, title, youtube_id, shuffle_index) VALUES (?, ?, ?, 0)", aliceID, "Song 1", "yt1")
 	song1ID, _ := res.LastInsertId()
 
 	// Bob is the guesser
@@ -222,6 +222,75 @@ func TestGuessingAndLeaderboard(t *testing.T) {
 		}
 		if !found {
 			t.Error("Bob not found in leaderboard")
+		}
+	})
+}
+
+func TestDuplicateSongGuessing(t *testing.T) {
+	database, _ := sql.Open("sqlite3", ":memory:")
+	defer database.Close()
+	_, _ = database.Exec(db.Schema)
+
+	partyID := "dup-party"
+	_, _ = database.Exec("INSERT INTO parties (id, name, admin_token, started, current_round, show_results, songs_per_round) VALUES (?, ?, ?, TRUE, 1, TRUE, 5)", partyID, "Dup Party", "token")
+
+	service := party.NewService(database, nil)
+
+	// Alice owns "Song X"
+	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
+	aliceID, _ := res.LastInsertId()
+	_, _ = database.Exec("INSERT INTO songs (user_id, title, youtube_id, thumbnail_url, shuffle_index) VALUES (?, ?, ?, ?, 0)", aliceID, "Song X", "yt1", "thumb1")
+
+	// Bob also owns "Song X"
+	res, _ = database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Bob")
+	bobID, _ := res.LastInsertId()
+	res, _ = database.Exec("INSERT INTO songs (user_id, title, youtube_id, thumbnail_url, shuffle_index) VALUES (?, ?, ?, ?, 1)", bobID, "Song X", "yt1", "thumb2")
+	song2ID, _ := res.LastInsertId()
+
+	// Charlie is the guesser
+	res, _ = database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Charlie")
+	charlieID, _ := res.LastInsertId()
+
+	t.Run("Guessing Alice for Bob's song should be correct", func(t *testing.T) {
+		// Charlie guesses Alice for Bob's instance of the song (song2ID)
+		err := service.SubmitGuess(context.Background(), int(charlieID), int(song2ID), int(aliceID))
+		if err != nil {
+			t.Fatalf("SubmitGuess failed: %v", err)
+		}
+
+		leaderboard, err := service.GetLeaderboard(context.Background(), partyID, 0)
+		if err != nil {
+			t.Fatalf("GetLeaderboard failed: %v", err)
+		}
+
+		var charlieScore int
+		for _, entry := range leaderboard {
+			if entry.UserName == "Charlie" {
+				charlieScore = entry.Score
+			}
+		}
+
+		if charlieScore != 1 {
+			t.Errorf("expected Charlie to have 1 point, got %d", charlieScore)
+		}
+	})
+
+	t.Run("GetRoundResults shows both owners", func(t *testing.T) {
+		results, err := service.GetRoundResults(context.Background(), partyID, 1)
+		if err != nil {
+			t.Fatalf("GetRoundResults failed: %v", err)
+		}
+
+		found := false
+		for _, r := range results {
+			if r.YouTubeID == "yt1" {
+				if r.OwnerName == "Alice, Bob" || r.OwnerName == "Bob, Alice" {
+					found = true
+				}
+			}
+		}
+		if !found {
+			t.Errorf("expected 'Alice, Bob' as owners for song yt1, got results: %+v", results)
 		}
 	})
 }
@@ -280,7 +349,7 @@ func TestGetRoundResults(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Move to next round to reveal round 1
+	// Move to next round to reveal 1
 	if err := svc.NextRound(ctx, partyID); err != nil {
 		t.Fatal(err)
 	}

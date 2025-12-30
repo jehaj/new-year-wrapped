@@ -190,7 +190,7 @@ func TestHandler_Guessing(t *testing.T) {
 	// Alice owns Song 1
 	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
 	aliceID, _ := res.LastInsertId()
-	res, _ = database.Exec("INSERT INTO songs (user_id, title, youtube_id, thumbnail_url, shuffle_index) VALUES (?, ?, '', '', 0)", aliceID, "Song 1")
+	res, _ = database.Exec("INSERT INTO songs (user_id, title, youtube_id, thumbnail_url, shuffle_index) VALUES (?, ?, 'yt1', '', 0)", aliceID, "Song 1")
 	song1ID, _ := res.LastInsertId()
 
 	// Bob is the guesser
@@ -291,7 +291,7 @@ func TestHandler_GetLeaderboard(t *testing.T) {
 	// Alice owns Song 1
 	res, _ := database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", partyID, "Alice")
 	aliceID, _ := res.LastInsertId()
-	res, _ = database.Exec("INSERT INTO songs (user_id, title, youtube_id, thumbnail_url, shuffle_index) VALUES (?, ?, '', '', 0)", aliceID, "Song 1")
+	res, _ = database.Exec("INSERT INTO songs (user_id, title, youtube_id, thumbnail_url, shuffle_index) VALUES (?, ?, 'yt1', '', 0)", aliceID, "Song 1")
 	song1ID, _ := res.LastInsertId()
 
 	// Bob is the guesser
