@@ -4,6 +4,7 @@
 - [x] As a user, I want to create a new Party so that I can host a game for my friends.
 - [x] As an admin, I want a unique Party ID and a secure token so that I can manage my party privately.
 - [x] As a user, I want to join a party with my name and 3 favorite songs so that I can participate.
+- [ ] As a user, I want to be able to join a party by scanning a QR code so that it's easier to access the party.
 - [x] As a user, I want to see a waiting screen with the list of joined players so I know when we are ready.
 - [x] As an admin, I want to start the competition once everyone has joined.
 
