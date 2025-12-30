@@ -127,7 +127,7 @@
             if (immediate) {
                 doSearch();
             } else {
-                searchTimeout = setTimeout(doSearch, 400);
+                searchTimeout = setTimeout(doSearch, 250);
             }
         }
 
@@ -168,7 +168,7 @@
                 console.error('Failed to load image', src);
             }
 
-            setTimeout(processImageQueue, 250);
+            setTimeout(processImageQueue, 350);
         }
 
         async function loadImageWithRetry(img, src, retryCount = 0) {
