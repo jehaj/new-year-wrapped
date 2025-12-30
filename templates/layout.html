@@ -160,6 +160,13 @@
             }
             isProcessingQueue = true;
             const img = imageQueue.shift();
+
+            // Skip if the image is no longer in the document (e.g. search results cleared)
+            if (!img.isConnected) {
+                processImageQueue();
+                return;
+            }
+
             const src = img.getAttribute('data-src');
 
             try {
