@@ -453,7 +453,34 @@
     <h3>Round {{.CurrentRound}} {{if .ShowResults}}- Results{{else}}- Guessing{{end}}</h3>
 
     {{if not .ShowResults}}
-    <!-- ...existing code... -->
+    <div id="guessing-section">
+        {{range .Songs}}
+        {{$guess := index $.UserGuesses .ID}}
+        <article class="card">
+            <header>
+                <strong>{{.Title}}</strong>
+            </header>
+            <form action="/ui/parties/{{$.Party.ID}}/guess" method="POST" style="margin-bottom: 0;">
+                <input type="hidden" name="user_name" value="{{$.UserName}}">
+                <input type="hidden" name="admin_token" value="{{$.AdminToken}}">
+                <input type="hidden" name="song_id" value="{{.ID}}">
+                <div class="grid">
+                    <select name="owner_name" required {{if $guess}}disabled{{end}}>
+                        <option value="" disabled {{if not $guess}}selected{{end}}>Who's song is this?</option>
+                        {{range $.Users}}
+                        <option value="{{.Name}}" {{if eq .Name $guess}}selected{{end}}>{{.Name}}</option>
+                        {{end}}
+                    </select>
+                    {{if not $guess}}
+                    <button type="submit">Submit Guess</button>
+                    {{else}}
+                    <button type="button" class="secondary" disabled>Guessed: {{$guess}}</button>
+                    {{end}}
+                </div>
+            </form>
+        </article>
+        {{end}}
+    </div>
     {{else}}
     <div id="round-results">
         <article class="card">

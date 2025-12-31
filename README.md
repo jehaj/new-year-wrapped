@@ -56,6 +56,16 @@ go run cmd/server/main.go
 ```
 The server will start on `http://localhost:8080`.
 
+### Running with Docker
+
+You can also run the application using Docker and Docker Compose:
+
+```bash
+docker-compose up --build
+```
+
+The server will be available at `http://localhost:8080`.
+
 ### Running Tests
 
 The project follows TDD principles. Run the test suite with:
