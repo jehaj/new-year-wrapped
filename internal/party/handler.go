@@ -336,14 +336,14 @@ func (h *Handler) QRCode(w http.ResponseWriter, r *http.Request) {
 	}
 	joinURL := fmt.Sprintf("%s://%s/parties/%s", scheme, r.Host, partyID)
 
-	qrc, err := qrcode.New(joinURL)
+	qrc, err := qrcode.NewWith(joinURL, qrcode.WithErrorCorrectionLevel(qrcode.ErrorCorrectionQuart))
 	if err != nil {
 		http.Error(w, "Kunne ikke generere QR-kode", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "image/png")
-	wr := standard.NewWithWriter(nopCloser{w})
+	wr := standard.NewWithWriter(nopCloser{w}, standard.WithLogoImageFilePNG("logo.png"))
 
 	if err := qrc.Save(wr); err != nil {
 		return
