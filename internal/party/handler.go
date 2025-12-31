@@ -30,7 +30,7 @@ func NewHandler(service *Service) *Handler {
 
 func (h *Handler) IndexPage(w http.ResponseWriter, r *http.Request) {
 	if h.templates == nil {
-		http.Error(w, "templates not loaded", http.StatusInternalServerError)
+		http.Error(w, "skabeloner ikke indlæst", http.StatusInternalServerError)
 		return
 	}
 	h.templates.ExecuteTemplate(w, "layout", nil)
@@ -38,7 +38,7 @@ func (h *Handler) IndexPage(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) PartyPage(w http.ResponseWriter, r *http.Request) {
 	if h.templates == nil {
-		http.Error(w, "templates not loaded", http.StatusInternalServerError)
+		http.Error(w, "skabeloner ikke indlæst", http.StatusInternalServerError)
 		return
 	}
 	partyID := h.getPartyID(r)
@@ -84,7 +84,7 @@ func (h *Handler) PartyPage(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 	if h.templates == nil {
-		http.Error(w, "templates not loaded", http.StatusInternalServerError)
+		http.Error(w, "skabeloner ikke indlæst", http.StatusInternalServerError)
 		return
 	}
 	partyID := h.getPartyID(r)
@@ -159,7 +159,7 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UICreateParty(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Metode ikke tilladt", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -207,7 +207,7 @@ func (h *Handler) UIStartCompetition(w http.ResponseWriter, r *http.Request) {
 
 	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
 	if !isAdmin {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		http.Error(w, "Uautoriseret", http.StatusUnauthorized)
 		return
 	}
 
@@ -225,7 +225,7 @@ func (h *Handler) UINextRound(w http.ResponseWriter, r *http.Request) {
 
 	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
 	if !isAdmin {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		http.Error(w, "Uautoriseret", http.StatusUnauthorized)
 		return
 	}
 
@@ -286,7 +286,7 @@ func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	if partyID == "" {
-		http.Error(w, "missing party id", http.StatusBadRequest)
+		http.Error(w, "mangler fest-ID", http.StatusBadRequest)
 		return
 	}
 
@@ -326,7 +326,7 @@ func (h *Handler) SearchSongs(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) QRCode(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	if partyID == "" {
-		http.Error(w, "Missing party ID", http.StatusBadRequest)
+		http.Error(w, "mangler fest-ID", http.StatusBadRequest)
 		return
 	}
 
@@ -338,7 +338,7 @@ func (h *Handler) QRCode(w http.ResponseWriter, r *http.Request) {
 
 	qrc, err := qrcode.New(joinURL)
 	if err != nil {
-		http.Error(w, "Failed to generate QR code", http.StatusInternalServerError)
+		http.Error(w, "Kunne ikke generere QR-kode", http.StatusInternalServerError)
 		return
 	}
 
@@ -358,7 +358,7 @@ func (nopCloser) Close() error { return nil }
 
 func (h *Handler) SongListPage(w http.ResponseWriter, r *http.Request) {
 	if h.templates == nil {
-		http.Error(w, "templates not loaded", http.StatusInternalServerError)
+		http.Error(w, "skabeloner ikke indlæst", http.StatusInternalServerError)
 		return
 	}
 	partyID := h.getPartyID(r)
@@ -367,7 +367,7 @@ func (h *Handler) SongListPage(w http.ResponseWriter, r *http.Request) {
 
 	isAdmin, _ := h.service.VerifyAdmin(r.Context(), partyID, adminToken)
 	if !isAdmin {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		http.Error(w, "Uautoriseret", http.StatusUnauthorized)
 		return
 	}
 
@@ -391,7 +391,7 @@ func (h *Handler) SongListPage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) StartCompetition(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	if partyID == "" {
-		http.Error(w, "missing party id", http.StatusBadRequest)
+		http.Error(w, "mangler fest-ID", http.StatusBadRequest)
 		return
 	}
 
@@ -406,7 +406,7 @@ func (h *Handler) StartCompetition(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetCurrentRound(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	if partyID == "" {
-		http.Error(w, "missing party id", http.StatusBadRequest)
+		http.Error(w, "mangler fest-ID", http.StatusBadRequest)
 		return
 	}
 
@@ -417,7 +417,7 @@ func (h *Handler) GetCurrentRound(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !started {
-		http.Error(w, "competition not started", http.StatusBadRequest)
+		http.Error(w, "konkurrencen er ikke startet", http.StatusBadRequest)
 		return
 	}
 
@@ -455,7 +455,7 @@ func (h *Handler) SubmitGuess(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	if partyID == "" {
-		http.Error(w, "missing party id", http.StatusBadRequest)
+		http.Error(w, "mangler fest-ID", http.StatusBadRequest)
 		return
 	}
 
@@ -465,7 +465,7 @@ func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 		var err error
 		round, err = strconv.Atoi(roundStr)
 		if err != nil {
-			http.Error(w, "invalid round", http.StatusBadRequest)
+			http.Error(w, "ugyldig runde", http.StatusBadRequest)
 			return
 		}
 	}
@@ -482,7 +482,7 @@ func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) NextRound(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	if partyID == "" {
-		http.Error(w, "missing party id", http.StatusBadRequest)
+		http.Error(w, "mangler fest-ID", http.StatusBadRequest)
 		return
 	}
 
@@ -497,7 +497,7 @@ func (h *Handler) NextRound(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetUsers(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	if partyID == "" {
-		http.Error(w, "missing party id", http.StatusBadRequest)
+		http.Error(w, "mangler fest-ID", http.StatusBadRequest)
 		return
 	}
 
@@ -513,19 +513,19 @@ func (h *Handler) GetUsers(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetRoundResults(w http.ResponseWriter, r *http.Request) {
 	partyID := h.getPartyID(r)
 	if partyID == "" {
-		http.Error(w, "missing party id", http.StatusBadRequest)
+		http.Error(w, "mangler fest-ID", http.StatusBadRequest)
 		return
 	}
 
 	roundStr := r.URL.Query().Get("round")
 	if roundStr == "" {
-		http.Error(w, "missing round", http.StatusBadRequest)
+		http.Error(w, "mangler runde", http.StatusBadRequest)
 		return
 	}
 
 	round, err := strconv.Atoi(roundStr)
 	if err != nil {
-		http.Error(w, "invalid round", http.StatusBadRequest)
+		http.Error(w, "ugyldig runde", http.StatusBadRequest)
 		return
 	}
 
