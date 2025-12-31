@@ -46,14 +46,27 @@ func (s *Service) JoinParty(ctx context.Context, partyID string, userName string
 	}
 	defer tx.Rollback()
 
-	// Check if party exists
-	var exists bool
-	err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM parties WHERE id = ?)", partyID).Scan(&exists)
+	// Check if party exists and hasn't started
+	var started bool
+	err = tx.QueryRowContext(ctx, "SELECT started FROM parties WHERE id = ?", partyID).Scan(&started)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("festen %s eksisterer ikke", partyID)
+		}
+		return err
+	}
+	if started {
+		return fmt.Errorf("festen %s er allerede startet", partyID)
+	}
+
+	// Check if user already exists
+	var userExists bool
+	err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE party_id = ? AND name = ?)", partyID, userName).Scan(&userExists)
 	if err != nil {
 		return err
 	}
-	if !exists {
-		return fmt.Errorf("festen %s eksisterer ikke", partyID)
+	if userExists {
+		return fmt.Errorf("navnet %s er allerede taget i denne fest", userName)
 	}
 
 	// Create user
