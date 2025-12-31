@@ -10,8 +10,13 @@ import (
 )
 
 func main() {
+	// Ensure data directory exists
+	if err := os.MkdirAll("data", 0755); err != nil {
+		log.Fatalf("failed to create data directory: %v", err)
+	}
+
 	// Setup logging to file
-	logFile, err := os.OpenFile("party.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err := os.OpenFile("data/party.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("failed to open log file: %v", err)
 	}
@@ -19,7 +24,7 @@ func main() {
 
 	partyLogger := log.New(logFile, "PARTY: ", log.LstdFlags)
 
-	database, err := db.Init("wrapped.db")
+	database, err := db.Init("data/wrapped.db")
 	if err != nil {
 		log.Fatalf("failed to init db: %v", err)
 	}
