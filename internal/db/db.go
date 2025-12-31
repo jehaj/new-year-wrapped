@@ -21,15 +21,16 @@ CREATE TABLE IF NOT EXISTS users (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	party_id TEXT NOT NULL,
 	name TEXT NOT NULL,
-	FOREIGN KEY (party_id) REFERENCES parties(id)
+	FOREIGN KEY (party_id) REFERENCES parties(id),
+	UNIQUE(party_id, name)
 );
 
 CREATE TABLE IF NOT EXISTS songs (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	user_id INTEGER NOT NULL,
 	title TEXT NOT NULL,
-	youtube_id TEXT,
-	thumbnail_url TEXT,
+	youtube_id TEXT NOT NULL DEFAULT '',
+	thumbnail_url TEXT NOT NULL DEFAULT '',
 	shuffle_index INTEGER DEFAULT -1,
 	FOREIGN KEY (user_id) REFERENCES users(id)
 );
