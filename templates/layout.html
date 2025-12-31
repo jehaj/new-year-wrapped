@@ -1,11 +1,11 @@
 {{define "layout"}}
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="da" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Year Wrapped</title>
+    <title>Nytårs Wrapped</title>
     <link rel="stylesheet" href="/static/css/pico.min.css">
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <style>
@@ -81,15 +81,16 @@
             font-weight: bold;
         }
     </style>
-    <meta name="description" content="New Year Wrapped - A Music-Wrapped competition to guess your friends' top songs.">
+    <meta name="description"
+        content="Nytårs Wrapped - Gæt hinandens yndlingssange.">
     <meta name="author" content="Nikolaj J-K">
-    <meta name="keywords" content="New Year Wrapped, Music Competition, YouTube Music, Party Game">
+    <meta name="keywords" content="Nytårs Wrapped, Musikkonkurrence, YouTube Music, Selskabsleg">
 </head>
 
 <body>
     <header class="hero">
         <div class="container">
-            <h1>New Year Wrapped 🎉</h1>
+            <h1>Nytårs Wrapped 🎉</h1>
             {{if .Party}}<h2>{{.Party.Name}}</h2>{{end}}
         </div>
     </header>
@@ -109,9 +110,9 @@
     <footer class="container"
         style="text-align: center; margin-top: 1rem; padding: 2rem 0; border-top: 1px solid #282828; opacity: 0.7;">
         <small>
-            New Year Wrapped 2025 &bull;
+            Nytårs Wrapped 2025 &bull;
             <a href="https://github.com/jehaj/new-year-wrapped" target="_blank" class="secondary">GitHub</a> &bull;
-            Built with Go & Pico CSS
+            Bygget med Go & Pico CSS
         </small>
     </footer>
 
@@ -240,18 +241,18 @@
 <section id="setup">
     <div class="grid">
         <article class="card">
-            <h3>Create a Party</h3>
+            <h3>Opret en fest</h3>
             <form action="/ui/parties/create" method="POST">
-                <input type="text" name="name" placeholder="Party Name" required>
-                <button type="submit">Create Party</button>
+                <input type="text" name="name" placeholder="Festnavn" required>
+                <button type="submit">Opret fest</button>
             </form>
         </article>
 
         <article class="card">
-            <h3>Join a Party</h3>
+            <h3>Deltag i en fest</h3>
             <form action="/parties" method="GET">
-                <input type="text" name="id" placeholder="Party ID" required>
-                <button type="submit" class="secondary">Join Party</button>
+                <input type="text" name="id" placeholder="Fest-ID" required>
+                <button type="submit" class="secondary">Deltag i fest</button>
             </form>
         </article>
     </div>
@@ -260,26 +261,26 @@
 
 {{define "party"}}
 <section id="party-room">
-    <p>Party ID: <code>{{.Party.ID}}</code></p>
+    <p>Fest-ID: <code>{{.Party.ID}}</code></p>
 
     {{if .IsAdmin}}
     <div style="text-align: center; margin-bottom: 2rem;">
         <img src="/parties/{{.Party.ID}}/qrcode" alt="Join QR Code"
             style="max-width: 200px; border: 10px solid white; border-radius: 10px;">
-        <p><small>Share this QR code with your friends!</small></p>
+        <p><small>Andre kan deltage med denne QR-kode!</small></p>
     </div>
     {{end}}
 
     {{if not .UserJoined}}
     <div id="join-section">
-        <h3>Join the Party</h3>
+        <h3>Deltag i festen</h3>
         <form action="/ui/parties/{{.Party.ID}}/join" method="POST" onsubmit="return validateSongs()">
             <input type="hidden" name="admin_token" value="{{.AdminToken}}">
-            <input type="text" name="user_name" placeholder="Your Name" required>
+            <input type="text" name="user_name" placeholder="Dit navn" required>
             <fieldset>
-                <legend>Your Top 3 Songs</legend>
+                <legend>Dine top 3 sange</legend>
                 <div class="song-input-group">
-                    <input type="text" name="song1" id="song1" placeholder="Search Song 1..." required
+                    <input type="text" name="song1" id="song1" placeholder="Søg efter sang 1..." required
                         oninput="searchSongs(this, 'results1', 1)"
                         onclick="event.stopPropagation(); searchSongs(this, 'results1', 1, true)" autocomplete="off">
                     <input type="hidden" name="song1_id" id="song1_id">
@@ -287,7 +288,7 @@
                     <div id="results1" class="search-results-container"></div>
                 </div>
                 <div class="song-input-group">
-                    <input type="text" name="song2" id="song2" placeholder="Search Song 2..." required
+                    <input type="text" name="song2" id="song2" placeholder="Søg efter sang 2..." required
                         oninput="searchSongs(this, 'results2', 2)"
                         onclick="event.stopPropagation(); searchSongs(this, 'results2', 2, true)" autocomplete="off">
                     <input type="hidden" name="song2_id" id="song2_id">
@@ -295,7 +296,7 @@
                     <div id="results2" class="search-results-container"></div>
                 </div>
                 <div class="song-input-group">
-                    <input type="text" name="song3" id="song3" placeholder="Search Song 3..." required
+                    <input type="text" name="song3" id="song3" placeholder="Søg efter sang 3..." required
                         oninput="searchSongs(this, 'results3', 3)"
                         onclick="event.stopPropagation(); searchSongs(this, 'results3', 3, true)" autocomplete="off">
                     <input type="hidden" name="song3_id" id="song3_id">
@@ -303,7 +304,7 @@
                     <div id="results3" class="search-results-container"></div>
                 </div>
             </fieldset>
-            <button type="submit">Submit & Join</button>
+            <button type="submit">Indsend & deltag</button>
         </form>
     </div>
 
@@ -312,7 +313,7 @@
             if (!document.getElementById('song1_id').value ||
                 !document.getElementById('song2_id').value ||
                 !document.getElementById('song3_id').value) {
-                alert('Please select all 3 songs from the search suggestions.');
+                alert('Vælg venligst alle 3 sange fra søgeforslagene.');
                 return false;
             }
             return true;
@@ -386,7 +387,7 @@
     </style>
     {{else}}
     <div id="waiting-room">
-        <h3>Waiting for players...</h3>
+        <h3>Venter på spillere...</h3>
         <ul>
             {{range .Users}}<li>{{.Name}}</li>{{end}}
         </ul>
@@ -395,19 +396,19 @@
             <form action="/ui/parties/{{.Party.ID}}/start" method="POST">
                 <input type="hidden" name="admin_token" value="{{.AdminToken}}">
                 <input type="hidden" name="user_name" value="{{.UserName}}">
-                <button type="submit">Start Competition</button>
+                <button type="submit">Start konkurrencen</button>
             </form>
             <div>
                 <a href="/parties/{{.Party.ID}}/song_list?admin_token={{.AdminToken}}&user={{.UserName}}" role="button"
-                    class="secondary" style="width: 100%;">View Song List</a>
+                    class="secondary" style="width: 100%;">Se sangliste</a>
             </div>
             {{else}}
-            <p>Waiting for admin to start...</p>
+            <p>Venter på at administratoren starter...</p>
             {{end}}
             <form action="/parties/{{.Party.ID}}" method="GET">
                 <input type="hidden" name="user" value="{{.UserName}}">
                 <input type="hidden" name="admin_token" value="{{.AdminToken}}">
-                <button type="submit" class="secondary">Refresh Players</button>
+                <button type="submit" class="secondary">Opdater spillere</button>
             </form>
         </div>
     </div>
@@ -419,19 +420,19 @@
 <section id="game-room">
     {{if .GameOver}}
     <article class="card">
-        <header>🏆 Game Over!</header>
-        <p>All songs have been guessed and revealed. Check your performance and the final leaderboard below!</p>
+        <header>Spillet er slut!</header>
+        <p>Alle sange er blevet gættet og afsløret. Se dine resultater og den endelige rangliste nedenfor!</p>
     </article>
 
     <article class="card">
-        <header>Your Guesses</header>
+        <header>Dine gæt</header>
         <div style="overflow-x: auto;">
             <table>
                 <thead>
                     <tr>
-                        <th>Song</th>
-                        <th>Your Guess</th>
-                        <th>Actual Owner(s)</th>
+                        <th>Sang</th>
+                        <th>Dit gæt</th>
+                        <th>Rigtig ejer</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -440,7 +441,7 @@
                     <tr>
                         <td>{{.Title}}</td>
                         <td class="{{if .IsCorrect $guess}}guess-correct{{else if $guess}}guess-incorrect{{end}}">
-                            {{if $guess}}{{$guess}}{{else}}<em>No guess</em>{{end}}
+                            {{if $guess}}{{$guess}}{{else}}<em>Intet gæt</em>{{end}}
                         </td>
                         <td>{{.OwnerName}}</td>
                     </tr>
@@ -450,7 +451,7 @@
         </div>
     </article>
     {{else}}
-    <h3>Round {{.CurrentRound}} {{if .ShowResults}}- Results{{else}}- Guessing{{end}}</h3>
+    <h3>Runde {{.CurrentRound}} {{if .ShowResults}}- Resultater{{else}}- Gæt{{end}}</h3>
 
     {{if not .ShowResults}}
     <div id="guessing-section">
@@ -466,15 +467,15 @@
                 <input type="hidden" name="song_id" value="{{.ID}}">
                 <div class="grid">
                     <select name="owner_name" required {{if $guess}}disabled{{end}}>
-                        <option value="" disabled {{if not $guess}}selected{{end}}>Who's song is this?</option>
+                        <option value="" disabled {{if not $guess}}selected{{end}}>Hvem ejer denne sang?</option>
                         {{range $.Users}}
                         <option value="{{.Name}}" {{if eq .Name $guess}}selected{{end}}>{{.Name}}</option>
                         {{end}}
                     </select>
                     {{if not $guess}}
-                    <button type="submit">Submit Guess</button>
+                    <button type="submit">Gæt</button>
                     {{else}}
-                    <button type="button" class="secondary" disabled>Guessed: {{$guess}}</button>
+                    <button type="button" class="secondary" disabled>Dit gæt: {{$guess}}</button>
                     {{end}}
                 </div>
             </form>
@@ -484,17 +485,17 @@
     {{else}}
     <div id="round-results">
         <article class="card">
-            <header>Round {{.CurrentRound}} Reveals</header>
+            <header>Afsløringer for runde {{.CurrentRound}}</header>
             <ul>
                 {{range .PreviousResults}}
                 {{$guess := index $.UserGuesses .ID}}
                 <li>
-                    <strong>{{.Title}}</strong> was by <strong>{{.OwnerName}}</strong>
+                    <strong>{{.Title}}</strong> var fra <strong>{{.OwnerName}}</strong>
                     {{if $guess}}
-                    <br><small>Your guess: <span
+                    <br><small>Dit gæt: <span
                             class="{{if .IsCorrect $guess}}guess-correct{{else}}guess-incorrect{{end}}">{{$guess}}</span></small>
                     {{else}}
-                    <br><small><em>You didn't guess for this song.</em></small>
+                    <br><small><em>Du gættede ikke på denne sang.</em></small>
                     {{end}}
                 </li>
                 {{end}}
@@ -508,12 +509,13 @@
         <div class="grid">
             {{if not .GameOver}}
             <div>
-                <h3>{{if .ShowResults}}Round {{.CurrentRound}} Results{{else}}Previous Round Results{{end}}</h3>
+                <h3>{{if .ShowResults}}Resultater for runde {{.CurrentRound}}{{else}}Resultater fra forrige runde{{end}}
+                </h3>
                 <table>
                     <thead>
                         <tr>
-                            <th>Player</th>
-                            <th>Score</th>
+                            <th>Spiller</th>
+                            <th>Point</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -528,12 +530,12 @@
             </div>
             {{end}}
             <div>
-                <h3>{{if .GameOver}}Final Leaderboard{{else}}Global Leaderboard{{end}}</h3>
+                <h3>{{if .GameOver}}Endelig rangliste{{else}}Samlet rangliste{{end}}</h3>
                 <table>
                     <thead>
                         <tr>
-                            <th>Player</th>
-                            <th>Score</th>
+                            <th>Spiller</th>
+                            <th>Point</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -555,19 +557,19 @@
             <input type="hidden" name="admin_token" value="{{.AdminToken}}">
             <input type="hidden" name="user_name" value="{{.UserName}}">
             <button type="submit">
-                {{if .ShowResults}}Next Round{{else}}Reveal Results{{end}}
+                {{if .ShowResults}}Næste runde{{else}}Afslør resultater{{end}}
             </button>
         </form>
         <div>
             <a href="/parties/{{.Party.ID}}/song_list?admin_token={{.AdminToken}}&user={{.UserName}}" role="button"
-                class="secondary" style="width: 100%;">View Song List</a>
+                class="secondary" style="width: 100%;">Se sangliste</a>
         </div>
         {{end}}
 
         <form action="/parties/{{.Party.ID}}/game" method="GET">
             <input type="hidden" name="user" value="{{.UserName}}">
             <input type="hidden" name="admin_token" value="{{.AdminToken}}">
-            <button type="submit" class="secondary">Refresh Round</button>
+            <button type="submit" class="secondary">Opdater runde</button>
         </form>
     </div>
 </section>
@@ -576,8 +578,8 @@
 {{define "song_list"}}
 <section id="song-list">
     <header>
-        <h3>Party Song List</h3>
-        <p>Admin view of all songs in the party.</p>
+        <h3>Festens sangliste</h3>
+        <p>Administratorvisning af alle sange i festen.</p>
     </header>
 
     <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
@@ -589,21 +591,22 @@
                     <img src="{{.ThumbnailURL}}" style="width: 60px; height: 60px; border-radius: 4px;">
                     <div>
                         <strong>{{.Title}}</strong><br>
-                        <small>Owner:</small>
+                        <small>Ejer:</small>
                         <span class="spoiler" tabindex="0">{{.OwnerName}}</span>
                     </div>
                 </div>
             </header>
             <a href="https://music.youtube.com/watch?v={{.YouTubeID}}" target="_blank" role="button"
-                class="secondary">Play on YouTube Music</a>
+                class="secondary">Afspil på YouTube Music</a>
         </article>
         {{else}}
-        <p>No songs have been added yet.</p>
+        <p>Ingen sange er tilføjet endnu.</p>
         {{end}}
     </div>
 
     <div style="margin-top: 2rem;">
-        <a href="/parties/{{.Party.ID}}?admin_token={{.AdminToken}}&user={{.UserName}}" role="button">Back to Party</a>
+        <a href="/parties/{{.Party.ID}}?admin_token={{.AdminToken}}&user={{.UserName}}" role="button">Tilbage til
+            festen</a>
     </div>
 </section>
 {{end}}

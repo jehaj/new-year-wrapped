@@ -37,7 +37,7 @@ func (s *Service) log(partyID string, format string, v ...interface{}) {
 func (s *Service) JoinParty(ctx context.Context, partyID string, userName string, songs []SongInput) error {
 	s.log(partyID, "User %s joining with %d songs", userName, len(songs))
 	if len(songs) != 3 {
-		return fmt.Errorf("exactly 3 songs are required, got %d", len(songs))
+		return fmt.Errorf("der kræves præcis 3 sange, fik %d", len(songs))
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -53,7 +53,7 @@ func (s *Service) JoinParty(ctx context.Context, partyID string, userName string
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("party %s does not exist", partyID)
+		return fmt.Errorf("festen %s eksisterer ikke", partyID)
 	}
 
 	// Create user
@@ -131,7 +131,7 @@ func (s *Service) StartCompetition(ctx context.Context, partyID string) error {
 	}
 
 	if len(songIDs) == 0 {
-		return fmt.Errorf("no songs found for party %s", partyID)
+		return fmt.Errorf("ingen sange fundet for festen %s", partyID)
 	}
 
 	// Shuffle songs
@@ -441,7 +441,7 @@ func (s *Service) GetRoundResults(ctx context.Context, partyID string, round int
 	}
 
 	if currentRound < round || (currentRound == round && !showResults) {
-		return nil, fmt.Errorf("round %d has not been revealed yet", round)
+		return nil, fmt.Errorf("runde %d er ikke blevet afsløret endnu", round)
 	}
 
 	startIndex := (round - 1) * songsPerRound
