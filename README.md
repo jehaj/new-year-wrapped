@@ -79,3 +79,7 @@ go test ./...
 - `internal/db/`: SQLite database initialization and schema management.
 - `templates/`: Server-side HTML templates (`layout.html`).
 - `static/`: Static assets (CSS, images).
+
+## GAI/LLM Disclosure
+
+This project was developed with assistance from Gemini 3 Flash, an AI language model for efficiancy.
