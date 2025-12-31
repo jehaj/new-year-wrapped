@@ -1,0 +1,20 @@
+meta {
+  name: Test Go
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://localhost:8080/api/search?q=adele
+  body: none
+  auth: inherit
+}
+
+params:query {
+  q: adele
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
