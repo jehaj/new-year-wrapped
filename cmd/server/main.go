@@ -66,7 +66,11 @@ func main() {
 	fs := http.FileServer(http.Dir("static"))
 	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
 
-	addr := "0.0.0.0:8080"
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	addr := "0.0.0.0:" + port
 	log.Println("Server starting on http://" + addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
