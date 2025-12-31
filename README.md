@@ -80,6 +80,12 @@ go test ./...
 - `templates/`: Server-side HTML templates (`layout.html`).
 - `static/`: Static assets (CSS, images).
 
+## Thanks To
+
+- [Pico CSS](https://picocss.com/) for the lightweight and beautiful CSS framework.
+- [yeqown/go-qrcode](https://github.com/yeqown/go-qrcode) for a easy to use QR code generation library.
+- [raitonoberu/ytmusic](https://github.com/raitonoberu/ytmusic) for YouTube Music integration that works—especially after I failed to do it myself.
+
 ## GAI/LLM Disclosure
 
 This project was developed with assistance from Gemini 3 Flash, an AI language model for efficiancy.
