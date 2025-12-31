@@ -358,6 +358,8 @@ func (r SongResult) IsCorrect(guess string) bool {
 }
 
 func (s *Service) SearchYouTubeMusic(ctx context.Context, query string) ([]SongInput, error) {
+	ytmusic.Language = "da"
+	ytmusic.Region = "DK"
 	search := ytmusic.TrackSearch(query)
 	result, err := search.Next()
 	if err != nil {

@@ -44,8 +44,7 @@ See the [User Stories](USER_STORIES.md) for a detailed list of features. Key hig
 2. The project uses local CSS. Ensure `static/css/pico.min.css` is present.
    e.g. with
    ```bash
-   mkdir -p static/css && curl -L https://cdn.jsdelivr.net/npm/
-@picocss/pico@2/css/pico.min.css -o static/css/pico.min.css
+   mkdir -p static/css && curl -L https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css -o static/css/pico.min.css
    ```
 
 ### Running the Application
