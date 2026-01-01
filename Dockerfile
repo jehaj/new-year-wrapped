@@ -20,6 +20,8 @@ RUN CGO_ENABLED=1 GOOS=linux go build -o server ./cmd/server/main.go
 # Final stage
 FROM alpine:latest
 
+LABEL org.opencontainers.image.source=https://github.com/jehaj/new-year-wrapped
+
 RUN apk add --no-cache sqlite-libs
 
 WORKDIR /app
