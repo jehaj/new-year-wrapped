@@ -65,6 +65,40 @@ docker-compose up --build
 
 The server will be available at `http://localhost:8080`.
 
+## Deployment with Docker & GitHub Container Registry (GHCR)
+
+To deploy the application to a server using GitHub Container Registry, follow these steps:
+
+### 1. Authenticate with GHCR
+You need a GitHub Personal Access Token (PAT) with `write:packages` scope.
+```bash
+echo $CR_PAT | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+```
+
+### 2. Build and Push the Image
+Replace `YOUR_GITHUB_USERNAME` with your actual GitHub username.
+```bash
+# Build the image
+docker build -t ghcr.io/jehaj/new-year-wrapped:latest .
+
+# Push to GitHub Container Registry
+docker push ghcr.io/jehaj/new-year-wrapped:latest
+```
+
+### 3. Deploy on the Server
+On your server, ensure Docker and Docker Compose are installed.
+
+1. **Login to GHCR** (same as step 1).
+2. **Create a `docker-compose.yml`** (you can use the one in this repo or the example in `examples/`).
+3. **Pull and Run**:
+```bash
+# Pull the latest image
+docker pull ghcr.io/jehaj/new-year-wrapped:latest
+
+# Start the application
+docker-compose up -d
+```
+
 ### Running Tests
 
 The project follows TDD principles. Run the test suite with:
