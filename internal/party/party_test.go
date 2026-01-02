@@ -372,3 +372,83 @@ func TestGetRoundResults(t *testing.T) {
 		}
 	}
 }
+
+func TestGetMostMysteriousUser(t *testing.T) {
+	database, _ := sql.Open("sqlite3", ":memory:")
+	defer database.Close()
+	_, err := database.Exec(db.Schema)
+	if err != nil {
+		t.Fatalf("failed to create schema: %v", err)
+	}
+
+	service := party.NewService(database, nil)
+	partyID := "mysterious-party"
+	database.Exec("INSERT INTO parties (id, name, admin_token) VALUES (?, ?, ?)", partyID, "Mysterious Party", "token")
+
+	// User 1: Easy to guess (everyone guesses right)
+	err = service.JoinParty(context.Background(), partyID, "Easy", []party.SongInput{
+		{Title: "Easy Song", YouTubeID: "easy1", ThumbnailURL: "thumb"},
+		{Title: "Easy Song 2", YouTubeID: "easy2", ThumbnailURL: "thumb"},
+		{Title: "Easy Song 3", YouTubeID: "easy3", ThumbnailURL: "thumb"},
+	})
+	if err != nil {
+		t.Fatalf("JoinParty Easy failed: %v", err)
+	}
+
+	// User 2: Mysterious (everyone guesses wrong)
+	err = service.JoinParty(context.Background(), partyID, "Mysterious", []party.SongInput{
+		{Title: "Hard Song", YouTubeID: "hard1", ThumbnailURL: "thumb"},
+		{Title: "Hard Song 2", YouTubeID: "hard2", ThumbnailURL: "thumb"},
+		{Title: "Hard Song 3", YouTubeID: "hard3", ThumbnailURL: "thumb"},
+	})
+	if err != nil {
+		t.Fatalf("JoinParty Mysterious failed: %v", err)
+	}
+
+	// User 3: Guesser
+	err = service.JoinParty(context.Background(), partyID, "Guesser", []party.SongInput{
+		{Title: "G1", YouTubeID: "g1", ThumbnailURL: "thumb"},
+		{Title: "G2", YouTubeID: "g2", ThumbnailURL: "thumb"},
+		{Title: "G3", YouTubeID: "g3", ThumbnailURL: "thumb"},
+	})
+	if err != nil {
+		t.Fatalf("JoinParty Guesser failed: %v", err)
+	}
+
+	var easyID, mysteriousID, guesserID int
+	database.QueryRow("SELECT id FROM users WHERE name = 'Easy'").Scan(&easyID)
+	database.QueryRow("SELECT id FROM users WHERE name = 'Mysterious'").Scan(&mysteriousID)
+	database.QueryRow("SELECT id FROM users WHERE name = 'Guesser'").Scan(&guesserID)
+
+	var easySongID, hardSongID int
+	database.QueryRow("SELECT id FROM songs WHERE user_id = ?", easyID).Scan(&easySongID)
+	database.QueryRow("SELECT id FROM songs WHERE user_id = ?", mysteriousID).Scan(&hardSongID)
+
+	// Guesser guesses Easy correctly
+	err = service.SubmitGuess(context.Background(), guesserID, easySongID, easyID)
+	if err != nil {
+		t.Fatalf("SubmitGuess Easy failed: %v", err)
+	}
+	// Guesser guesses Mysterious incorrectly (guesses Easy instead)
+	err = service.SubmitGuess(context.Background(), guesserID, hardSongID, easyID)
+	if err != nil {
+		t.Fatalf("SubmitGuess Mysterious failed: %v", err)
+	}
+
+	mostMysterious, err := service.GetMostMysteriousUser(context.Background(), partyID)
+	if err != nil {
+		t.Fatalf("GetMostMysteriousUser failed: %v", err)
+	}
+
+	if mostMysterious == nil {
+		t.Fatal("expected a most mysterious user, got nil")
+	}
+
+	if mostMysterious.UserName != "Mysterious" {
+		t.Errorf("expected Mysterious to be most mysterious, got %s", mostMysterious.UserName)
+	}
+
+	if mostMysterious.Score != 1 {
+		t.Errorf("expected 1 incorrect guess for Mysterious, got %d", mostMysterious.Score)
+	}
+}
