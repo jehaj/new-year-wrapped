@@ -120,6 +120,46 @@ func TestHandler_JoinParty(t *testing.T) {
 	})
 }
 
+func TestHandler_UIGuess(t *testing.T) {
+	database, _ := sql.Open("sqlite3", ":memory:")
+	defer database.Close()
+	_, _ = database.Exec(db.Schema)
+	_, _ = database.Exec("INSERT INTO parties (id, name, admin_token) VALUES (?, ?, ?)", "p1", "Test Party", "token")
+	_, _ = database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", "p1", "User1")
+	_, _ = database.Exec("INSERT INTO users (party_id, name) VALUES (?, ?)", "p1", "User2")
+	_, _ = database.Exec("INSERT INTO songs (party_id, user_id, title) VALUES (?, ?, ?)", "p1", 2, "Song 1")
+
+	service := party.NewService(database, nil)
+	handler := party.NewHandler(service)
+
+	t.Run("Standard redirect", func(t *testing.T) {
+		form := "user_name=User1&admin_token=token&song_id=1&owner_name=User2"
+		req := httptest.NewRequest("POST", "/ui/parties/p1/guess", bytes.NewBufferString(form))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+
+		handler.UIGuess(rr, req)
+
+		if rr.Code != http.StatusSeeOther {
+			t.Errorf("expected status 303, got %d", rr.Code)
+		}
+	})
+
+	t.Run("AJAX response", func(t *testing.T) {
+		form := "user_name=User1&admin_token=token&song_id=1&owner_name=User2"
+		req := httptest.NewRequest("POST", "/ui/parties/p1/guess", bytes.NewBufferString(form))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("X-Requested-With", "XMLHttpRequest")
+		rr := httptest.NewRecorder()
+
+		handler.UIGuess(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", rr.Code)
+		}
+	})
+}
+
 func TestHandler_Competition(t *testing.T) {
 	database, _ := sql.Open("sqlite3", ":memory:")
 	defer database.Close()
