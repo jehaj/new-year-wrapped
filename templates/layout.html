@@ -81,8 +81,7 @@
             font-weight: bold;
         }
     </style>
-    <meta name="description"
-        content="Nytårs Wrapped - Gæt hinandens yndlingssange.">
+    <meta name="description" content="Nytårs Wrapped - Gæt hinandens yndlingssange.">
     <meta name="author" content="Nikolaj J-K">
     <meta name="keywords" content="Nytårs Wrapped, Musikkonkurrence, YouTube Music, Selskabsleg">
 </head>
@@ -422,6 +421,14 @@
     <article class="card">
         <header>Spillet er slut!</header>
         <p>Alle sange er blevet gættet og afsløret. Se dine resultater og den endelige rangliste nedenfor!</p>
+        {{if .MostMysterious}}
+        <div
+            style="text-align: center; padding: 1rem; background: rgba(29, 185, 84, 0.1); border-radius: 1rem; border: 1px solid var(--primary);">
+            <h4 style="margin-bottom: 0.5rem;">🕵️ Den mest mystiske person</h4>
+            <p style="font-size: 1.2rem; margin-bottom: 0;"><strong>{{.MostMysterious.UserName}}</strong></p>
+            <small>{{.MostMysterious.Score}} personer gættede forkert på denne persons smag!</small>
+        </div>
+        {{end}}
     </article>
 
     <article class="card">

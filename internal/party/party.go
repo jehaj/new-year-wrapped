@@ -312,6 +312,31 @@ func (s *Service) GetLeaderboard(ctx context.Context, partyID string, round int)
 	return leaderboard, nil
 }
 
+func (s *Service) GetMostMysteriousUser(ctx context.Context, partyID string) (*LeaderboardEntry, error) {
+	query := `
+		SELECT u.name, COUNT(CASE WHEN NOT (
+			(s.youtube_id != '' AND EXISTS (SELECT 1 FROM songs s2 WHERE s2.youtube_id = s.youtube_id AND s2.user_id = g.guessed_user_id)) OR
+			(s.youtube_id = '' AND g.guessed_user_id = s.user_id)
+		) AND g.id IS NOT NULL THEN 1 END) as incorrect_guesses
+		FROM users u
+		JOIN songs s ON u.id = s.user_id
+		LEFT JOIN guesses g ON s.id = g.song_id
+		WHERE u.party_id = ?
+		GROUP BY u.id
+		ORDER BY incorrect_guesses DESC
+		LIMIT 1`
+
+	var entry LeaderboardEntry
+	err := s.db.QueryRowContext(ctx, query, partyID).Scan(&entry.UserName, &entry.Score)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &entry, nil
+}
+
 func (s *Service) NextRound(ctx context.Context, partyID string) error {
 	var showResults bool
 	err := s.db.QueryRowContext(ctx, "SELECT show_results FROM parties WHERE id = ?", partyID).Scan(&showResults)
