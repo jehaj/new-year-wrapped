@@ -81,8 +81,7 @@
             font-weight: bold;
         }
     </style>
-    <meta name="description"
-        content="Nytårs Wrapped - Gæt hinandens yndlingssange.">
+    <meta name="description" content="Nytårs Wrapped - Gæt hinandens yndlingssange.">
     <meta name="author" content="Nikolaj J-K">
     <meta name="keywords" content="Nytårs Wrapped, Musikkonkurrence, YouTube Music, Selskabsleg">
 </head>
@@ -231,6 +230,50 @@
                 img.removeAttribute('data-src');
             });
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const guessingSection = document.getElementById('guessing-section');
+            if (guessingSection) {
+                guessingSection.addEventListener('submit', async (e) => {
+                    if (e.target.tagName === 'FORM' && e.target.action.includes('/guess')) {
+                        e.preventDefault();
+                        const form = e.target;
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        const select = form.querySelector('select[name="owner_name"]');
+
+                        if (submitBtn) submitBtn.disabled = true;
+                        if (select) select.disabled = true;
+
+                        const formData = new FormData(form);
+                        try {
+                            const response = await fetch(form.action, {
+                                method: 'POST',
+                                body: formData,
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            });
+                            if (response.ok) {
+                                if (submitBtn) {
+                                    submitBtn.textContent = `Dit gæt: ${select.value}`;
+                                    submitBtn.type = 'button';
+                                    submitBtn.classList.add('secondary');
+                                }
+                            } else {
+                                if (submitBtn) submitBtn.disabled = false;
+                                if (select) select.disabled = false;
+                                alert('Der skete en fejl ved afsendelse af gæt.');
+                            }
+                        } catch (error) {
+                            console.error('Error submitting guess:', error);
+                            if (submitBtn) submitBtn.disabled = false;
+                            if (select) select.disabled = false;
+                            alert('Der skete en netværksfejl.');
+                        }
+                    }
+                });
+            }
+        });
     </script>
 </body>
 

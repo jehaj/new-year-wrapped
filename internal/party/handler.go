@@ -258,6 +258,11 @@ func (h *Handler) UIGuess(w http.ResponseWriter, r *http.Request) {
 		h.service.SubmitGuess(r.Context(), guesserID, songID, ownerID)
 	}
 
+	if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	http.Redirect(w, r, fmt.Sprintf("/parties/%s/game?user=%s&admin_token=%s", partyID, userName, adminToken), http.StatusSeeOther)
 }
 
@@ -545,8 +550,10 @@ func (h *Handler) getPartyID(r *http.Request) string {
 	}
 	// Fallback for tests
 	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) >= 3 {
-		return parts[2]
+	for i, part := range parts {
+		if part == "parties" && i+1 < len(parts) {
+			return parts[i+1]
+		}
 	}
 	return ""
 }
