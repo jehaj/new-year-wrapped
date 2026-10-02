@@ -125,10 +125,12 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if game is over
 	gameOver := false
+	var mostMysterious *LeaderboardEntry
 	if !showResults && len(songs) == 0 {
 		gameOver = true
 		// Fetch all songs for the final reveal
 		previousResults, _ = h.service.GetPartySongs(r.Context(), partyID)
+		mostMysterious, _ = h.service.GetMostMysteriousUser(r.Context(), partyID)
 	}
 
 	data := map[string]interface{}{
@@ -140,6 +142,7 @@ func (h *Handler) GamePage(w http.ResponseWriter, r *http.Request) {
 		"CurrentRound":      currentRound,
 		"ShowResults":       showResults,
 		"GameOver":          gameOver,
+		"MostMysterious":    mostMysterious,
 		"Songs":             songs,
 		"TotalSongs":        totalSongs,
 		"Users":             users,
